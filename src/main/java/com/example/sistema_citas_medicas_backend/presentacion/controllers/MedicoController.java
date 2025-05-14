@@ -10,68 +10,79 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 
-import java.util.List;
+
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/medicos")
-@CrossOrigin(origins = "*") // ✅ para desarrollo con React (puedes ajustar esto)
+@CrossOrigin(origins = "*") // Habilita peticiones desde React (ajustable en prod)
 public class MedicoController {
 
     private final MedicoService medicoService;
-    private final MedicoMapper medicoMapper;
+    private final Mapper<MedicoEntity, MedicoDto> medicoMapper;
 
-    public MedicoController(MedicoService medicoService, MedicoMapper medicoMapper) {
+    public MedicoController(MedicoService medicoService, Mapper<MedicoEntity, MedicoDto> medicoMapper) {
         this.medicoService = medicoService;
         this.medicoMapper = medicoMapper;
     }
 
-    // ✅ Obtener perfil de un médico por su ID
+    // ✅ Obtener perfil de un médico por ID
     @GetMapping("/{id}")
-    public ResponseEntity<MedicoDto> obtenerPerfil(@PathVariable Long id) {
+    public ResponseEntity<MedicoDto> obtenerMedico(@PathVariable Long id) {
         return medicoService.obtenerPorId(id)
                 .map(medicoMapper::mapTo)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // ✅ Actualizar perfil del médico
-    @PutMapping("/{id}")
-    public ResponseEntity<MedicoDto> actualizarPerfil(@PathVariable Long id, @RequestBody MedicoDto dto) {
-        MedicoEntity medico = medicoMapper.mapFrom(dto);
-        medico.setId(id); // aseguramos que el ID se respete
-        MedicoEntity actualizado = medicoService.actualizarMedico(medico);
-
-        return (actualizado != null)
-                ? ResponseEntity.ok(medicoMapper.mapTo(actualizado))
-                : ResponseEntity.notFound().build();
-    }
-
-    // ✅ Listar todos los médicos aprobados (para búsqueda)
-    @GetMapping
-    public ResponseEntity<List<MedicoDto>> obtenerTodos() {
-        return ResponseEntity.ok(medicoService.obtenerMedicos());
-    }
-
-    // ✅ Buscar médicos por especialidad y localidad (parámetros opcionales)
-    @GetMapping("/buscar")
-    public ResponseEntity<List<MedicoDto>> buscarPorEspecialidadYLocalidad(
-            @RequestParam(required = false) String especialidad,
-            @RequestParam(required = false) String localidad) {
-        return ResponseEntity.ok(medicoService.buscarPorEspecialidadYUbicacion(especialidad, localidad));
-    }
-
-    // ✅ Obtener lista de especialidades distintas
-    @GetMapping("/especialidades")
-    public ResponseEntity<List<String>> obtenerEspecialidades() {
-        return ResponseEntity.ok(medicoService.obtenerEspecialidades());
-    }
-
-    // ✅ Actualizar estado de aprobación (para el admin)
-    @PatchMapping("/{id}/aprobacion")
-    public ResponseEntity<Void> actualizarEstadoAprobacion(
+    @PutMapping(value = "/{id}", consumes = "multipart/form-data")
+    public ResponseEntity<MedicoDto> actualizarMedicoConFoto(
             @PathVariable Long id,
-            @RequestParam MedicoEntity.EstadoAprobacion estado) {
-        medicoService.actualizarEstadoAprobacion(id, estado);
-        return ResponseEntity.ok().build();
+            @ModelAttribute MedicoDto dto,
+            @RequestPart(value = "fotoPerfil", required = false) MultipartFile fotoPerfil
+    ) {
+        Optional<MedicoEntity> medicoOpt = medicoService.obtenerPorId(id);
+
+        if (medicoOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        MedicoEntity existente = medicoOpt.get();
+
+        existente.setNombre(dto.getNombre());
+        existente.setEspecialidad(dto.getEspecialidad());
+        existente.setCostoConsulta(dto.getCostoConsulta());
+        existente.setLocalidad(dto.getLocalidad());
+        existente.setFrecuenciaCitas(dto.getFrecuenciaCitas());
+        existente.setPresentacion(dto.getPresentacion());
+
+        if (fotoPerfil != null && !fotoPerfil.isEmpty()) {
+            try {
+                String nombreArchivo = "medico_" + id + "_" + System.currentTimeMillis() + "_" + fotoPerfil.getOriginalFilename();
+                Path rutaCarpeta = Paths.get("uploads/fotos_perfil");
+                Files.createDirectories(rutaCarpeta);
+
+                Path rutaCompleta = rutaCarpeta.resolve(nombreArchivo);
+                Files.copy(fotoPerfil.getInputStream(), rutaCompleta, StandardCopyOption.REPLACE_EXISTING);
+
+                String rutaRelativa = "/uploads/fotos_perfil/" + nombreArchivo;
+                existente.setRutaFotoPerfil(rutaRelativa);
+
+            } catch (IOException e) {
+                return ResponseEntity.internalServerError().build();
+            }
+        }
+
+        medicoService.actualizarMedico(existente);
+        return ResponseEntity.ok(medicoMapper.mapTo(existente));
     }
+
+
+
 }
+
+
