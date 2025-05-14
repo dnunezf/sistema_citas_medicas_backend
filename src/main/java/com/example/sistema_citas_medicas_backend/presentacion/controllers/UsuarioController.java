@@ -19,7 +19,7 @@ import java.util.*;
 // PARA PERMITIR COMUNICACIÓN CON REACT
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
-@RequestMapping("/api/v1/usuarios")
+@RequestMapping("/api/usuarios")
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
