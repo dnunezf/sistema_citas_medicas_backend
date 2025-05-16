@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -86,16 +88,32 @@ public class UsuarioController {
 
 
 
-    // ✅ Autenticación (login simple sin JWT aún)
-    @PostMapping("/login")
-    public ResponseEntity<UsuarioDto> login(@RequestBody UsuarioDto dto) {
-        Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(dto.getId());
+    // ✅ Login de usuario (muy básico, se puede mejorar con JWT)
 
-        if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(dto.getClave())) {
-            UsuarioDto respuesta = usuarioMapper.mapTo(usuarioOpt.get());
-            return ResponseEntity.ok(respuesta);
+    @PostMapping("/login")
+    public ResponseEntity<UsuarioDto> login(@RequestBody UsuarioDto loginDto) {
+        Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
+
+        if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(loginDto.getClave())) {
+            UsuarioDto usuarioDto = usuarioMapper.mapTo(usuarioOpt.get());
+            return ResponseEntity.ok(usuarioDto);
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // sin cuerpo, pero con 401
     }
+
+//    @PostMapping("/login")
+//    public ResponseEntity<UsuarioDto> login(@RequestBody UsuarioDto loginDto) {
+//        return usuarioService.findById(loginDto.getId())
+//                .filter(usuario -> usuario.getClave().equals(loginDto.getClave()))
+//                .map(usuario -> ResponseEntity.ok(usuarioMapper.mapTo(usuario)))
+//                .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
+//    }
+
+    // ✅ Lista de roles disponibles (usado por React para mostrar opciones)
+    @GetMapping("/roles")
+    public ResponseEntity<List<RolUsuario>> obtenerRoles() {
+        return ResponseEntity.ok(Arrays.asList(RolUsuario.MEDICO, RolUsuario.PACIENTE));
+    }
+
 }
