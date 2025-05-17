@@ -9,6 +9,7 @@ import com.example.sistema_citas_medicas_backend.dto.UsuarioDto;
 import com.example.sistema_citas_medicas_backend.mappers.Mapper;
 import com.example.sistema_citas_medicas_backend.mappers.impl.UsuarioMapper;
 import com.example.sistema_citas_medicas_backend.servicios.UsuarioService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -90,32 +92,45 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<? extends UsuarioDto> login(@RequestBody UsuarioDto loginDto) {
+    public ResponseEntity<?> login(@RequestBody UsuarioDto loginDto, HttpSession session) {
         Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
 
         if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(loginDto.getClave())) {
             UsuarioEntity usuario = usuarioOpt.get();
 
-            if (usuario.getRol() == RolUsuario.MEDICO) {
-                // Cast seguro porque sabemos que es un MedicoEntity
-                MedicoEntity medico = (MedicoEntity) usuario;
-                MedicoDto medicoDto = medicoMapper.mapTo(medico);
-                return ResponseEntity.ok(medicoDto);
+            // Guardar usuario en sesión
+            session.setAttribute("usuario", usuario);
+
+            // Obtener URL pendiente si existía
+            String urlPendiente = (String) session.getAttribute("urlPendiente");
+            session.removeAttribute("urlPendiente"); // Limpiarla después de usarla
+
+            String rol = usuario.getRol().name();
+            String redirect;
+
+            if (urlPendiente != null) {
+                redirect = urlPendiente;
+            } else {
+                redirect = switch (usuario.getRol()) {
+                    case PACIENTE -> "/dashboard";
+                    case MEDICO -> "/citas/medico/" + usuario.getId();
+                    case ADMINISTRADOR -> "/admin/lista";
+                };
             }
 
-            return ResponseEntity.ok(usuarioMapper.mapTo(usuario));
+            // Armar respuesta con datos útiles
+            return ResponseEntity.ok(Map.of(
+                    "id", usuario.getId(),
+                    "nombre", usuario.getNombre(),
+                    "rol", rol,
+                    "redirect", redirect
+            ));
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
     }
 
-//    @PostMapping("/login")
-//    public ResponseEntity<UsuarioDto> login(@RequestBody UsuarioDto loginDto) {
-//        return usuarioService.findById(loginDto.getId())
-//                .filter(usuario -> usuario.getClave().equals(loginDto.getClave()))
-//                .map(usuario -> ResponseEntity.ok(usuarioMapper.mapTo(usuario)))
-//                .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
-//    }
+
 
     @GetMapping("/roles")
     public ResponseEntity<List<RolUsuario>> obtenerRoles() {
