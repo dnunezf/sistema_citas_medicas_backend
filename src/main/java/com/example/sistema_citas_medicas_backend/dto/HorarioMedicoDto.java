@@ -27,8 +27,7 @@ public class HorarioMedicoDto {
 
     public String getDiaSemana() { return diaSemana; }
     public void setDiaSemana(String diaSemana) { this.diaSemana = diaSemana; }
-
-    public String getHoraInicio() { return horaInicio; }
+   public String getHoraInicio() { return horaInicio; }
     public void setHoraInicio(String horaInicio) { this.horaInicio = horaInicio; }
 
     public String getHoraFin() { return horaFin; }

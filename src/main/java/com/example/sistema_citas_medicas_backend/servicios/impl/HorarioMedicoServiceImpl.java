@@ -55,25 +55,24 @@ public class HorarioMedicoServiceImpl implements HorarioMedicoService {
         return modelMapper.map(horario, HorarioMedicoDto.class);
     }
 
+    @Override
     public HorarioMedicoEntity guardarHorario(HorarioMedicoDto horarioDto) {
         HorarioMedicoEntity horario = new HorarioMedicoEntity();
 
         horario.setDiaSemana(HorarioMedicoEntity.DiaSemana.valueOf(horarioDto.getDiaSemana().toLowerCase()));
 
-        // Formato de 24 horas
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         horario.setHoraInicio(LocalTime.parse(horarioDto.getHoraInicio(), formatter));
         horario.setHoraFin(LocalTime.parse(horarioDto.getHoraFin(), formatter));
-
         horario.setTiempoCita(horarioDto.getTiempoCita());
 
-
         MedicoEntity medico = medicoRepository.findById(horarioDto.getIdMedico())
-                .orElseThrow(() -> new RuntimeException("Error: Médico no encontrado con ID " + horarioDto.getIdMedico()));
-
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
         horario.setMedico(medico);
+
         return horarioMedicoRepository.save(horario);
     }
+
 
 
     @Override
