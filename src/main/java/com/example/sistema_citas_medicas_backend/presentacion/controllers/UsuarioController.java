@@ -4,6 +4,7 @@ import com.example.sistema_citas_medicas_backend.datos.entidades.MedicoEntity;
 import com.example.sistema_citas_medicas_backend.datos.entidades.PacienteEntity;
 import com.example.sistema_citas_medicas_backend.datos.entidades.RolUsuario;
 import com.example.sistema_citas_medicas_backend.datos.entidades.UsuarioEntity;
+import com.example.sistema_citas_medicas_backend.dto.MedicoDto;
 import com.example.sistema_citas_medicas_backend.dto.UsuarioDto;
 import com.example.sistema_citas_medicas_backend.mappers.Mapper;
 import com.example.sistema_citas_medicas_backend.mappers.impl.UsuarioMapper;
@@ -25,10 +26,14 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final Mapper<UsuarioEntity, UsuarioDto> usuarioMapper;
+    private final Mapper<MedicoEntity, MedicoDto> medicoMapper;
 
-    public UsuarioController(UsuarioService usuarioService, Mapper<UsuarioEntity, UsuarioDto> usuarioMapper) {
+    public UsuarioController(UsuarioService usuarioService,
+                             Mapper<UsuarioEntity, UsuarioDto> usuarioMapper,
+                             Mapper<MedicoEntity, MedicoDto> medicoMapper) {
         this.usuarioService = usuarioService;
         this.usuarioMapper = usuarioMapper;
+        this.medicoMapper = medicoMapper;
     }
 
     // ✅ Registro de usuarios
@@ -91,15 +96,23 @@ public class UsuarioController {
     // ✅ Login de usuario (muy básico, se puede mejorar con JWT)
 
     @PostMapping("/login")
-    public ResponseEntity<UsuarioDto> login(@RequestBody UsuarioDto loginDto) {
+    public ResponseEntity<? extends UsuarioDto> login(@RequestBody UsuarioDto loginDto) {
         Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
 
         if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(loginDto.getClave())) {
-            UsuarioDto usuarioDto = usuarioMapper.mapTo(usuarioOpt.get());
-            return ResponseEntity.ok(usuarioDto);
+            UsuarioEntity usuario = usuarioOpt.get();
+
+            if (usuario.getRol() == RolUsuario.MEDICO) {
+                // Cast seguro porque sabemos que es un MedicoEntity
+                MedicoEntity medico = (MedicoEntity) usuario;
+                MedicoDto medicoDto = medicoMapper.mapTo(medico);
+                return ResponseEntity.ok(medicoDto);
+            }
+
+            return ResponseEntity.ok(usuarioMapper.mapTo(usuario));
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // sin cuerpo, pero con 401
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
 //    @PostMapping("/login")
