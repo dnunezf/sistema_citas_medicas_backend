@@ -36,7 +36,6 @@ public class UsuarioController {
         this.medicoMapper = medicoMapper;
     }
 
-    // ✅ Registro de usuarios
     @PostMapping("/registro")
     public ResponseEntity<?> registrarUsuario(@RequestBody UsuarioDto dto) {
         if (dto.getNombre() == null || dto.getNombre().isBlank()) {
@@ -90,11 +89,6 @@ public class UsuarioController {
         }
     }
 
-
-
-
-    // ✅ Login de usuario (muy básico, se puede mejorar con JWT)
-
     @PostMapping("/login")
     public ResponseEntity<? extends UsuarioDto> login(@RequestBody UsuarioDto loginDto) {
         Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
@@ -123,7 +117,6 @@ public class UsuarioController {
 //                .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
 //    }
 
-    // ✅ Lista de roles disponibles (usado por React para mostrar opciones)
     @GetMapping("/roles")
     public ResponseEntity<List<RolUsuario>> obtenerRoles() {
         return ResponseEntity.ok(Arrays.asList(RolUsuario.MEDICO, RolUsuario.PACIENTE));

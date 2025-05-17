@@ -1,91 +1,83 @@
 package com.example.sistema_citas_medicas_backend.presentacion.controllers;
 
-
-
-
 import com.example.sistema_citas_medicas_backend.datos.entidades.CitaEntity;
 import com.example.sistema_citas_medicas_backend.dto.CitaDto;
 import com.example.sistema_citas_medicas_backend.servicios.CitaService;
-import com.example.sistema_citas_medicas_backend.servicios.HorarioMedicoService;
-import com.example.sistema_citas_medicas_backend.servicios.MedicoService;
-import com.example.sistema_citas_medicas_backend.servicios.PacienteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/citas")
+@RequestMapping("/api/medico/citas")
 @CrossOrigin("*")
 public class CitaController {
 
     private final CitaService citaService;
-    private final MedicoService medicoService;
-    private final HorarioMedicoService horarioMedicoService;
-    private final PacienteService pacienteService;
 
-    public CitaController(CitaService citaService, MedicoService medicoService, HorarioMedicoService horarioMedicoService, PacienteService pacienteService) {
+    public CitaController(CitaService citaService) {
         this.citaService = citaService;
-        this.medicoService = medicoService;
-        this.horarioMedicoService = horarioMedicoService;
-        this.pacienteService = pacienteService;
     }
 
-    // ✅ Obtener citas de un médico
-    @GetMapping("/medico/{idMedico}")
-    public ResponseEntity<List<CitaDto>> listarCitas(@PathVariable Long idMedico) {
-        List<CitaDto> citas = citaService.obtenerCitasPorMedico(idMedico);
-        return ResponseEntity.ok(citas);
+    // Obtener todas las citas por médico, ordenadas (más recientes primero)
+    @GetMapping("/{idMedico}")
+    public ResponseEntity<List<CitaDto>> obtenerCitasPorMedico(@PathVariable Long idMedico) {
+        return ResponseEntity.ok(citaService.obtenerCitasPorMedico(idMedico));
     }
 
-    // ✅ Filtrar por estado
-    @GetMapping("/medico/{idMedico}/estado")
-    public ResponseEntity<List<CitaDto>> filtrarPorEstado(@PathVariable Long idMedico, @RequestParam String estado) {
+    // Filtrar por estado
+    @GetMapping("/{idMedico}/estado")
+    public ResponseEntity<List<CitaDto>> filtrarPorEstado(@PathVariable Long idMedico,
+                                                          @RequestParam String estado) {
         if (estado.equalsIgnoreCase("ALL")) {
-            return listarCitas(idMedico);
-        }
-        CitaEntity.EstadoCita estadoEnum = CitaEntity.EstadoCita.valueOf(estado);
-        List<CitaDto> citas = citaService.filtrarCitasPorEstado(idMedico, estadoEnum);
-        return ResponseEntity.ok(citas);
-    }
-
-    // ✅ Filtrar por estado y nombre paciente
-    @GetMapping("/medico/{idMedico}/filtrar")
-    public ResponseEntity<List<CitaDto>> filtrarCitas(
-            @PathVariable Long idMedico,
-            @RequestParam(required = false) String estado,
-            @RequestParam(required = false) String nombrePaciente) {
-
-        boolean filtraEstado = estado != null && !estado.equalsIgnoreCase("ALL");
-        boolean filtraNombre = nombrePaciente != null && !nombrePaciente.isBlank();
-
-        List<CitaDto> citas;
-
-        if (filtraEstado && filtraNombre) {
-            citas = citaService.filtrarCitasPorEstadoYNombre(idMedico,
-                    CitaEntity.EstadoCita.valueOf(estado), nombrePaciente);
-        } else if (filtraEstado) {
-            citas = citaService.filtrarCitasPorEstado(idMedico, CitaEntity.EstadoCita.valueOf(estado));
-        } else if (filtraNombre) {
-            citas = citaService.filtrarCitasPorPaciente(idMedico, nombrePaciente);
+            return ResponseEntity.ok(citaService.obtenerCitasPorMedico(idMedico));
         } else {
-            citas = citaService.obtenerCitasPorMedico(idMedico);
+            CitaEntity.EstadoCita estadoEnum = CitaEntity.EstadoCita.valueOf(estado.toLowerCase());
+            return ResponseEntity.ok(citaService.filtrarCitasPorEstado(idMedico, estadoEnum));
         }
-
-        return ResponseEntity.ok(citas);
     }
 
-    // ✅ Actualizar cita
+    // Filtrar por nombre de paciente
+    @GetMapping("/{idMedico}/paciente")
+    public ResponseEntity<List<CitaDto>> filtrarPorPaciente(@PathVariable Long idMedico,
+                                                            @RequestParam String nombre) {
+        return ResponseEntity.ok(citaService.filtrarCitasPorPaciente(idMedico, nombre));
+    }
+
+    // Filtrar por estado + nombre
+    @GetMapping("/{idMedico}/buscar")
+    public ResponseEntity<List<CitaDto>> filtrarCitas(@PathVariable Long idMedico,
+                                                      @RequestParam(required = false) String estado,
+                                                      @RequestParam(required = false) String nombre) {
+        boolean tieneEstado = estado != null && !estado.equalsIgnoreCase("ALL");
+        boolean tieneNombre = nombre != null && !nombre.isBlank();
+
+        if (tieneEstado && tieneNombre) {
+            CitaEntity.EstadoCita estadoEnum = CitaEntity.EstadoCita.valueOf(estado.toLowerCase());
+            return ResponseEntity.ok(citaService.filtrarCitasPorEstadoYNombre(idMedico, estadoEnum, nombre));
+        } else if (tieneEstado) {
+            CitaEntity.EstadoCita estadoEnum = CitaEntity.EstadoCita.valueOf(estado.toLowerCase());
+            return ResponseEntity.ok(citaService.filtrarCitasPorEstado(idMedico, estadoEnum));
+        } else if (tieneNombre) {
+            return ResponseEntity.ok(citaService.filtrarCitasPorPaciente(idMedico, nombre));
+        } else {
+            return ResponseEntity.ok(citaService.obtenerCitasPorMedico(idMedico));
+        }
+    }
+
+    // Completar o actualizar cita (estado + notas)
     @PutMapping("/{idCita}")
-    public ResponseEntity<String> actualizarCita(
-            @PathVariable Long idCita,
-            @RequestBody ActualizarCitaRequest request) {
-        citaService.actualizarCita(idCita, CitaEntity.EstadoCita.valueOf(request.estado()), request.notas());
-        return ResponseEntity.ok("Cita actualizada");
+    public ResponseEntity<CitaDto> actualizarCita(@PathVariable Long idCita,
+                                                  @RequestParam String estado,
+                                                  @RequestParam(required = false) String notas) {
+        CitaEntity.EstadoCita estadoEnum = CitaEntity.EstadoCita.valueOf(estado.toLowerCase());
+        CitaDto actualizada = citaService.actualizarCita(idCita, estadoEnum, notas);
+        return ResponseEntity.ok(actualizada);
     }
 
-    // DTO auxiliar para actualización
-    public record ActualizarCitaRequest(String estado, String notas) {}
+    // Obtener detalles de una cita
+    @GetMapping("/detalle/{idCita}")
+    public ResponseEntity<CitaDto> obtenerCitaPorId(@PathVariable Long idCita) {
+        return ResponseEntity.ok(citaService.obtenerCitaPorId(idCita));
+    }
 }
-

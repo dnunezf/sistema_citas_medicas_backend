@@ -142,9 +142,6 @@ public class CitaServiceImpl implements CitaService {
         return espaciosDisponibles;
     }
 
-
-
-
     @Override
     @Transactional
     public CitaDto agendarCita(Long idPaciente, Long idMedico, LocalDateTime fechaHora) {
