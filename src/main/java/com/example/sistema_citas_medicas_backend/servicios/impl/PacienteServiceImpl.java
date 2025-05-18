@@ -29,13 +29,18 @@ public class PacienteServiceImpl implements PacienteService {
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
 
         pacienteExistente.setNombre(paciente.getNombre());
-        pacienteExistente.setClave(paciente.getClave()); // sin codificar
         pacienteExistente.setFechaNacimiento(paciente.getFechaNacimiento());
         pacienteExistente.setTelefono(paciente.getTelefono());
         pacienteExistente.setDireccion(paciente.getDireccion());
 
+        // Solo actualiza la clave si viene una nueva (y no está vacía)
+        if (paciente.getClave() != null && !paciente.getClave().isBlank()) {
+            pacienteExistente.setClave(paciente.getClave());
+        }
+
         pacienteRepository.save(pacienteExistente);
     }
+
 
     @Override
     public Optional<PacienteEntity> findOne(Long id) {

@@ -7,7 +7,9 @@ import com.example.sistema_citas_medicas_backend.servicios.CitaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/paciente/citas")
@@ -67,5 +69,21 @@ public class CitaPacienteController {
     public ResponseEntity<CitaDto> obtenerDetalleCita(@PathVariable Long idCita) {
         return ResponseEntity.ok(citaService.obtenerCitaPorId(idCita));
     }
+
+    @PostMapping("/confirmar")
+    public ResponseEntity<CitaDto> confirmarCita(@RequestBody Map<String, Object> datos) {
+        try {
+            Long idPaciente = Long.valueOf(datos.get("idPaciente").toString());
+            Long idMedico = Long.valueOf(datos.get("idMedico").toString());
+            String fechaHoraStr = datos.get("fechaHora").toString();
+            LocalDateTime fechaHora = LocalDateTime.parse(fechaHoraStr);
+
+            CitaDto citaCreada = citaService.agendarCita(idPaciente, idMedico, fechaHora);
+            return ResponseEntity.ok(citaCreada);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
 }
 
