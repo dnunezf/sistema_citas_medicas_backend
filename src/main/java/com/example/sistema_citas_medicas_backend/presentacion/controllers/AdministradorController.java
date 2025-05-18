@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*") // para permitir conexión desde React
+@CrossOrigin(origins = "*")
 public class AdministradorController {
 
     private final MedicoService medicoService;
@@ -19,14 +19,12 @@ public class AdministradorController {
         this.medicoService = medicoService;
     }
 
-    // ✅ Obtener lista de médicos
     @GetMapping("/medicos")
     public ResponseEntity<List<MedicoEntity>> obtenerTodos() {
         List<MedicoEntity> medicos = medicoService.obtenerTodosMedicos();
         return ResponseEntity.ok(medicos);
     }
 
-    // ✅ Cambiar estado de aprobación
     @PutMapping("/medicos/{id}/estado")
     public ResponseEntity<String> actualizarEstado(
             @PathVariable Long id,
@@ -40,6 +38,5 @@ public class AdministradorController {
         }
     }
 
-    // DTO interno para el cambio de estado
     public record EstadoAprobacionRequest(String estadoAprobacion) {}
 }

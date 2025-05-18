@@ -130,8 +130,6 @@ public class UsuarioController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
     }
 
-
-
     @GetMapping("/roles")
     public ResponseEntity<List<RolUsuario>> obtenerRoles() {
         return ResponseEntity.ok(Arrays.asList(RolUsuario.MEDICO, RolUsuario.PACIENTE));

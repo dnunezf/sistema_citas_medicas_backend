@@ -24,21 +24,18 @@ public class HorarioMedicoController {
         this.horarioMedicoService = horarioMedicoService;
     }
 
-    // ✅ Obtener horarios por médico
     @GetMapping("/medico/{idMedico}")
     public ResponseEntity<List<HorarioMedicoDto>> listarHorarios(@PathVariable Long idMedico) {
         List<HorarioMedicoDto> horarios = horarioMedicoService.obtenerHorariosPorMedico(idMedico);
         return ResponseEntity.ok(horarios);
     }
 
-    // ✅ Obtener un horario por ID (para edición)
     @GetMapping("/{idHorario}")
     public ResponseEntity<HorarioMedicoDto> obtenerHorario(@PathVariable Long idHorario) {
         HorarioMedicoDto horario = horarioMedicoService.obtenerHorarioPorId(idHorario);
         return ResponseEntity.ok(horario);
     }
 
-    // ✅ Crear nuevo horario
     @PostMapping("/medico/{idMedico}")
     public ResponseEntity<String> guardarHorario(@PathVariable Long idMedico, @RequestBody HorarioMedicoDto horarioDto) {
         horarioDto.setIdMedico(idMedico); // asignar el médico al DTO
@@ -46,16 +43,12 @@ public class HorarioMedicoController {
         return ResponseEntity.ok("Horario guardado correctamente.");
     }
 
-
-
-    // ✅ Actualizar horario existente
     @PutMapping("/{idHorario}")
     public ResponseEntity<String> actualizarHorario(@PathVariable Long idHorario, @RequestBody HorarioMedicoDto horarioDto) {
         horarioMedicoService.actualizarHorario(idHorario, horarioDto);
         return ResponseEntity.ok("Horario actualizado correctamente.");
     }
 
-    // ✅ Eliminar horario
     @DeleteMapping("/{idHorario}")
     public ResponseEntity<String> eliminarHorario(@PathVariable Long idHorario) {
         Long idMedico = horarioMedicoService.obtenerIdMedicoPorHorario(idHorario); // debe devolverlo

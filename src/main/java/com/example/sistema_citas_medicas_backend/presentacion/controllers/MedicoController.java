@@ -30,7 +30,6 @@ public class MedicoController {
         this.medicoMapper = medicoMapper;
     }
 
-    // ✅ Obtener perfil de un médico por ID
     @GetMapping("/{id}")
     public ResponseEntity<MedicoDto> obtenerMedico(@PathVariable Long id) {
         return medicoService.obtenerPorId(id)
@@ -80,9 +79,6 @@ public class MedicoController {
         medicoService.actualizarMedico(existente);
         return ResponseEntity.ok(medicoMapper.mapTo(existente));
     }
-
-
-
 }
 
 
