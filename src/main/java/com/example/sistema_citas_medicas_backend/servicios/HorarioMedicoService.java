@@ -20,5 +20,6 @@ public interface HorarioMedicoService {
 
     Long obtenerIdMedicoPorHorario(Long idHorario);
 
+
 }
 
