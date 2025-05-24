@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -91,44 +88,90 @@ public class UsuarioController {
         }
     }
 
+//    @PostMapping("/login")
+//    public ResponseEntity<?> login(@RequestBody UsuarioDto loginDto, HttpSession session) {
+//        Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
+//
+//        if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(loginDto.getClave())) {
+//            UsuarioEntity usuario = usuarioOpt.get();
+//
+//            // Guardar usuario en sesión
+//            session.setAttribute("usuario", usuario);
+//
+//            // Obtener URL pendiente si existía
+//            String urlPendiente = (String) session.getAttribute("urlPendiente");
+//            session.removeAttribute("urlPendiente"); // Limpiarla después de usarla
+//
+//            String rol = usuario.getRol().name();
+//            String redirect;
+//
+//            if (urlPendiente != null) {
+//                redirect = urlPendiente;
+//            } else {
+//                redirect = switch (usuario.getRol()) {
+//                    case PACIENTE -> "/dashboard";
+//                    case MEDICO -> "/citas/medico/" + usuario.getId();
+//                    case ADMINISTRADOR -> "/admin/lista";
+//                };
+//            }
+//
+//            // Armar respuesta con datos útiles
+//            return ResponseEntity.ok(Map.of(
+//                    "id", usuario.getId(),
+//                    "nombre", usuario.getNombre(),
+//                    "rol", rol,
+//                    "redirect", redirect
+//            ));
+//        }
+//
+//        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
+//    }
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody UsuarioDto loginDto, HttpSession session) {
+    public ResponseEntity<?> login(@RequestBody UsuarioDto loginDto) {
         Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
 
         if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(loginDto.getClave())) {
             UsuarioEntity usuario = usuarioOpt.get();
 
-            // Guardar usuario en sesión
-            session.setAttribute("usuario", usuario);
+            if (usuario instanceof MedicoEntity) {
+                MedicoEntity medico = (MedicoEntity) usuario;
 
-            // Obtener URL pendiente si existía
-            String urlPendiente = (String) session.getAttribute("urlPendiente");
-            session.removeAttribute("urlPendiente"); // Limpiarla después de usarla
+                if (medico.getEstadoAprobacion() == MedicoEntity.EstadoAprobacion.pendiente) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body("Cuenta pendiente de aprobación por el administrador.");
+                }
+                if (medico.getEstadoAprobacion() == MedicoEntity.EstadoAprobacion.rechazado) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body("Cuenta rechazada. Contacte al administrador.");
+                }
 
-            String rol = usuario.getRol().name();
-            String redirect;
+                // Validar si perfil está completo (ejemplo: especialidad distinta a "Especialidad no definida")
+                boolean perfilCompleto = medico.getEspecialidad() != null
+                        && !medico.getEspecialidad().equalsIgnoreCase("Especialidad no definida")
+                        && medico.getPresentacion() != null
+                        && !medico.getPresentacion().equalsIgnoreCase("Presentación no disponible")
+                        && medico.getLocalidad() != null
+                        && !medico.getLocalidad().equalsIgnoreCase("Localidad no especificada");
 
-            if (urlPendiente != null) {
-                redirect = urlPendiente;
-            } else {
-                redirect = switch (usuario.getRol()) {
-                    case PACIENTE -> "/dashboard";
-                    case MEDICO -> "/citas/medico/" + usuario.getId();
-                    case ADMINISTRADOR -> "/admin/lista";
-                };
+                Map<String, Object> respuesta = new HashMap<>();
+                respuesta.put("id", medico.getId());
+                respuesta.put("nombre", medico.getNombre());
+                respuesta.put("rol", medico.getRol().name());
+                respuesta.put("perfilCompleto", perfilCompleto);
+
+                return ResponseEntity.ok(respuesta);
             }
 
-            // Armar respuesta con datos útiles
-            return ResponseEntity.ok(Map.of(
-                    "id", usuario.getId(),
-                    "nombre", usuario.getNombre(),
-                    "rol", rol,
-                    "redirect", redirect
-            ));
+            UsuarioDto dto = usuarioMapper.mapTo(usuario);
+            return ResponseEntity.ok(dto);
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas.");
     }
+
+
+
 
     @GetMapping("/roles")
     public ResponseEntity<List<RolUsuario>> obtenerRoles() {
