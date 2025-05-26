@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -53,21 +54,37 @@ public class DashboardController {
         Map<Long, Map<String, List<String>>> espaciosAgrupadosPorFecha = new HashMap<>();
         Map<Long, List<String>> horasOcupadasPorMedico = new HashMap<>();
 
+
         for (MedicoDto medico : medicos) {
             List<HorarioMedicoDto> horarios = horarioMedicoService.obtenerHorariosPorMedico(medico.getId());
             List<LocalDateTime> espacios = citaService.generarTodosLosEspacios(medico.getId(), horarios);
 
+            ZoneId zona = ZoneId.of("America/Costa_Rica"); // o systemDefault()
+            LocalDate hoy = LocalDate.now(zona);
+            LocalDate limite = hoy.plusDays(2);
+
+// Ajustar cada LocalDateTime a la zona local antes de filtrar
+
+            List<LocalDateTime> espaciosFiltrados = espacios.stream()
+                    .filter(d -> {
+                        // OJO: Aquí d debería estar en la zona correcta o convertirla
+                        LocalDate fecha = d.toLocalDate();
+                        return !fecha.isBefore(hoy) && !fecha.isAfter(limite);
+                    })
+                    .collect(Collectors.toList());
+
+
             // Agrupar espacios disponibles por fecha (yyyy-MM-dd)
-            Map<String, List<String>> agrupados = espacios.stream()
+            Map<String, List<String>> agrupados = espaciosFiltrados.stream()
                     .collect(Collectors.groupingBy(
-                            d -> d.toLocalDate().toString(),
+                            d -> d.toLocalDate().toString(),  // YYYY-MM-DD
                             LinkedHashMap::new,
                             Collectors.mapping(LocalDateTime::toString, Collectors.toList())
                     ));
 
             espaciosAgrupadosPorFecha.put(medico.getId(), agrupados);
 
-            // Horas ocupadas
+            // Obtener horas ocupadas igual que antes
             List<CitaDto> citas = citaService.obtenerCitasPorMedico(medico.getId());
             List<String> ocupadas = citas.stream()
                     .map(c -> c.getFechaHora().toString())
@@ -76,7 +93,7 @@ public class DashboardController {
             horasOcupadasPorMedico.put(medico.getId(), ocupadas);
         }
 
-        // Respuesta estructurada
+        // Construir y devolver respuesta
         Map<String, Object> response = new HashMap<>();
         response.put("medicos", medicos);
         response.put("espaciosAgrupados", espaciosAgrupadosPorFecha);

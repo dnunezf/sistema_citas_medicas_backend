@@ -16,9 +16,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
@@ -245,7 +243,8 @@ public class CitaServiceImpl implements CitaService {
 
     public List<LocalDateTime> generarTodosLosEspacios(Long idMedico, List<HorarioMedicoDto> horarios) {
         List<LocalDateTime> espacios = new ArrayList<>();
-        LocalDate fechaActual = LocalDate.now();
+        ZoneId zona = ZoneId.of("America/Costa_Rica");
+        LocalDate fechaActual = LocalDate.now(zona);
 
         for (int i = 0; i < 3; i++) {
             LocalDate fecha = fechaActual.plusDays(i);
@@ -258,9 +257,11 @@ public class CitaServiceImpl implements CitaService {
                     LocalTime fin = LocalTime.parse(horario.getHoraFin());
                     int duracion = horario.getTiempoCita();
 
-                    LocalDateTime current = LocalDateTime.of(fecha, inicio);
-                    while (!current.toLocalTime().isAfter(fin.minusMinutes(duracion))) {
-                        espacios.add(current);
+                    ZonedDateTime current = ZonedDateTime.of(fecha, inicio, zona);
+                    ZonedDateTime finZdt = ZonedDateTime.of(fecha, fin.minusMinutes(duracion), zona);
+
+                    while (!current.isAfter(finZdt)) {
+                        espacios.add(current.toLocalDateTime()); // guardas LocalDateTime plano, pero siempre en la zona correcta
                         current = current.plusMinutes(duracion);
                     }
                 }
@@ -268,6 +269,7 @@ public class CitaServiceImpl implements CitaService {
         }
         return espacios;
     }
+
 
     public List<LocalDateTime> generarEspaciosDesdeFecha(Long idMedico, List<HorarioMedicoDto> horarios, LocalDate fechaInicio, int dias) {
         List<LocalDateTime> espacios = new ArrayList<>();
