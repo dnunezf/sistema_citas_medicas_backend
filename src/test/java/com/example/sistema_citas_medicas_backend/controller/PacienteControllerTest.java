@@ -105,4 +105,24 @@ class PacienteControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().string("Error al actualizar datos: Error en DB"));
     }
+
+    @Test
+    void testActualizarPacienteConCamposOpcionalesNulos() throws Exception {
+        PacienteDto parcial = new PacienteDto();
+        parcial.setId(1L);
+        parcial.setNombre("Carlos");
+
+        PacienteEntity parcialEntity = new PacienteEntity();
+        parcialEntity.setId(1L);
+        parcialEntity.setNombre("Carlos");
+
+        when(pacienteMapper.mapFrom(any(PacienteDto.class))).thenReturn(parcialEntity);
+
+        mockMvc.perform(put("/api/pacientes/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(parcial)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Paciente actualizado correctamente."));
+    }
+
 }

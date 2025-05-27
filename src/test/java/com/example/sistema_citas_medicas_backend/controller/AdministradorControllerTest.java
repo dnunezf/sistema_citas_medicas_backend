@@ -82,4 +82,20 @@ class AdministradorControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Error al actualizar el estado."));
     }
+
+    @Test
+    void testActualizarEstadoAprobacionException() throws Exception {
+        AdministradorController.EstadoAprobacionRequest request =
+                new AdministradorController.EstadoAprobacionRequest("rechazado");
+
+        Mockito.doThrow(new IllegalArgumentException("ID no válido"))
+                .when(medicoService)
+                .actualizarEstadoAprobacion(eq(999L), any());
+
+        mockMvc.perform(put("/api/admin/medicos/999/estado")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Error al actualizar el estado."));
+    }
 }

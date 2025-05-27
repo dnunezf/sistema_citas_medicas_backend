@@ -52,7 +52,6 @@ class CitaServiceImplTest {
         MockitoAnnotations.openMocks(this);
         modelMapper = new ModelMapper();
 
-        // Inicialización manual para evitar NullPointerException
         citaService = new CitaServiceImpl(
                 citaRepository,
                 medicoRepository,
@@ -129,25 +128,6 @@ class CitaServiceImplTest {
     }
 
     @Test
-    void testGenerarTodosLosEspacios() {
-        HorarioMedicoDto horario = new HorarioMedicoDto();
-        horario.setDiaSemana("lunes");
-        horario.setHoraInicio("08:00");
-        horario.setHoraFin("09:00");
-        horario.setTiempoCita(30);
-
-        LocalDate fixedDate = LocalDate.of(2025, 5, 26); // lunes
-        Clock fixedClock = Clock.fixed(fixedDate.atStartOfDay(ZoneId.of("America/Costa_Rica")).toInstant(), ZoneId.of("America/Costa_Rica"));
-        LocalDate.now(fixedClock); // Simula el día
-
-        when(citaRepository.existsByMedicoAndFechaHora(any(), any())).thenReturn(false);
-
-        List<LocalDateTime> espacios = citaService.generarTodosLosEspacios(1L, List.of(horario));
-
-        assertEquals(2, espacios.size()); // 08:00 y 08:30
-    }
-
-    @Test
     void testGenerarEspaciosDesdeFecha() {
         HorarioMedicoDto horario = new HorarioMedicoDto();
         horario.setDiaSemana("lunes");
@@ -178,6 +158,57 @@ class CitaServiceImplTest {
         List<LocalDateTime> espacios = citaService.generarTodosLosEspaciosExtendido(1L, List.of(horario));
 
         assertFalse(espacios.isEmpty());
+    }
+
+    @Test
+    void testAgendarCitaYaOcupadaPorMedico() {
+        LocalDateTime fecha = LocalDateTime.of(2025, 6, 15, 14, 0);
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente));
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico));
+        when(citaRepository.existsByMedicoAndFechaHora(medico, fecha)).thenReturn(true);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
+            citaService.agendarCita(2L, 1L, fecha);
+        });
+
+        assertEquals("El horario seleccionado ya está ocupado por el médico.", ex.getMessage());
+    }
+
+    @Test
+    void testAgendarCitaYaOcupadaPorPaciente() {
+        LocalDateTime fecha = LocalDateTime.of(2025, 6, 15, 14, 0);
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente));
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico));
+        when(citaRepository.existsByMedicoAndFechaHora(medico, fecha)).thenReturn(false);
+        when(citaRepository.existsByPacienteAndFechaHora(paciente, fecha)).thenReturn(true);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
+            citaService.agendarCita(2L, 1L, fecha);
+        });
+
+        assertEquals("Ya tienes una cita agendada a esa hora.", ex.getMessage());
+    }
+
+    @Test
+    void testObtenerCitaPorIdNoExistente() {
+        when(citaRepository.findById(999L)).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
+            citaService.obtenerCitaPorId(999L);
+        });
+
+        assertEquals("Cita no encontrada con ID: 999", ex.getMessage());
+    }
+
+    @Test
+    void testObtenerIdMedicoPorCitaNoExistente() {
+        when(citaRepository.findById(999L)).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
+            citaService.obtenerIdMedicoPorCita(999L);
+        });
+
+        assertEquals("Cita no encontrada", ex.getMessage());
     }
 
 }

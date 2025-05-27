@@ -50,9 +50,12 @@ class PacienteServiceImplTest {
 
         pacienteService.actualizarPaciente(actualizado);
 
-        verify(pacienteRepository).save(any(PacienteEntity.class));
+        verify(pacienteRepository).save(paciente);
         assertEquals("Carlos Actualizado", paciente.getNombre());
         assertEquals("nuevaClave", paciente.getClave());
+        assertEquals(LocalDate.of(1990, 1, 1), paciente.getFechaNacimiento());
+        assertEquals("9999-9999", paciente.getTelefono());
+        assertEquals("Heredia", paciente.getDireccion());
     }
 
     @Test
@@ -63,8 +66,21 @@ class PacienteServiceImplTest {
 
         pacienteService.actualizarPaciente(sinClave);
 
-        verify(pacienteRepository).save(any(PacienteEntity.class));
-        assertEquals("clave", paciente.getClave()); // no debe cambiar
+        verify(pacienteRepository).save(paciente);
+        assertEquals("clave", paciente.getClave());
+    }
+
+    @Test
+    void testActualizarPacienteNoExistente() {
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.empty());
+
+        PacienteEntity pacienteInexistente = new PacienteEntity(2L, "Inexistente", "clave", LocalDate.now(), "1234", "Desconocido");
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                pacienteService.actualizarPaciente(pacienteInexistente)
+        );
+
+        assertEquals("Paciente no encontrado", ex.getMessage());
     }
 
     @Test

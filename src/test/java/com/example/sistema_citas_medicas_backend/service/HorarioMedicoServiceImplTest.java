@@ -118,4 +118,78 @@ class HorarioMedicoServiceImplTest {
 
         assertEquals(1L, idMedico);
     }
+
+    @Test
+    void testObtenerHorarioPorIdNoExistente() {
+        when(horarioMedicoRepository.findById(999L)).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                horarioService.obtenerHorarioPorId(999L)
+        );
+
+        assertEquals("Horario no encontrado", ex.getMessage());
+    }
+
+    @Test
+    void testGuardarHorarioMedicoNoEncontrado() {
+        HorarioMedicoDto dto = new HorarioMedicoDto();
+        dto.setIdMedico(999L);
+        dto.setDiaSemana("lunes");
+        dto.setHoraInicio("08:00");
+        dto.setHoraFin("12:00");
+        dto.setTiempoCita(30);
+
+        when(medicoRepository.findById(999L)).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                horarioService.guardarHorario(dto)
+        );
+
+        assertEquals("Médico no encontrado", ex.getMessage());
+    }
+
+    @Test
+    void testActualizarHorarioNoExistente() {
+        HorarioMedicoDto dto = new HorarioMedicoDto();
+        dto.setDiaSemana("lunes");
+        dto.setHoraInicio("08:00");
+        dto.setHoraFin("12:00");
+        dto.setTiempoCita(30);
+
+        when(horarioMedicoRepository.findById(99L)).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                horarioService.actualizarHorario(99L, dto)
+        );
+
+        assertEquals("Horario no encontrado", ex.getMessage());
+    }
+
+    @Test
+    void testActualizarHorarioDiaSemanaInvalido() {
+        when(horarioMedicoRepository.findById(10L)).thenReturn(Optional.of(horario));
+
+        HorarioMedicoDto dto = new HorarioMedicoDto();
+        dto.setDiaSemana("diamadre");
+        dto.setHoraInicio("08:00");
+        dto.setHoraFin("12:00");
+        dto.setTiempoCita(30);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                horarioService.actualizarHorario(10L, dto)
+        );
+
+        assertEquals("Día de la semana inválido: diamadre", ex.getMessage());
+    }
+
+    @Test
+    void testEliminarHorarioNoExistente() {
+        when(horarioMedicoRepository.existsById(999L)).thenReturn(false);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                horarioService.eliminarHorario(999L)
+        );
+
+        assertEquals("Horario no encontrado", ex.getMessage());
+    }
 }

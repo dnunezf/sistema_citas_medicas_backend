@@ -82,7 +82,7 @@ class CitaControllerTest {
 
     @Test
     void testActualizarCita() throws Exception {
-        citaDto.setEstado("confirmada"); // ← actualizamos el mock para reflejar el cambio
+        citaDto.setEstado("confirmada");
 
         when(citaService.actualizarCita(1L, CitaEntity.EstadoCita.confirmada, "Todo listo"))
                 .thenReturn(citaDto);
@@ -124,4 +124,5 @@ class CitaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1L));
     }
+
 }

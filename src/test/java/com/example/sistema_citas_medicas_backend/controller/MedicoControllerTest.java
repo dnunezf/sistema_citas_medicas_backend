@@ -111,4 +111,26 @@ class MedicoControllerTest {
                         }))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void testActualizarMedicoSinFoto() throws Exception {
+        when(medicoService.obtenerPorId(1L)).thenReturn(Optional.of(medico));
+        when(medicoService.actualizarMedico(any(MedicoEntity.class))).thenReturn(medico);
+        when(medicoMapper.mapTo(any(MedicoEntity.class))).thenReturn(medicoDto);
+
+        mockMvc.perform(multipart("/api/medicos/1")
+                        .param("nombre", "Dr. Juan Actualizado")
+                        .param("especialidad", "Neurología")
+                        .param("costoConsulta", "60000")
+                        .param("localidad", "Alajuela")
+                        .param("frecuenciaCitas", "20")
+                        .param("presentacion", "Especialista en neurología")
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Dr. Juan"))
+                .andExpect(jsonPath("$.especialidad").value("Cardiología")); // Mismo DTO
+    }
 }

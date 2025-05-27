@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.mockito.MockitoAnnotations;
 
+
 class MedicoServiceImplTest {
 
     @Mock
@@ -71,6 +72,19 @@ class MedicoServiceImplTest {
     }
 
     @Test
+    void testActualizarMedicoNoExistente() {
+        when(medicoRepository.findById(2L)).thenReturn(Optional.empty());
+
+        MedicoEntity otroMedico = new MedicoEntity();
+        otroMedico.setId(2L);
+        otroMedico.setNombre("Dr. Inexistente");
+
+        MedicoEntity resultado = medicoService.actualizarMedico(otroMedico);
+
+        assertNull(resultado);
+    }
+
+    @Test
     void testObtenerTodosMedicos() {
         when(medicoRepository.findAll()).thenReturn(Collections.singletonList(medico));
 
@@ -91,6 +105,17 @@ class MedicoServiceImplTest {
     }
 
     @Test
+    void testActualizarEstadoAprobacionMedicoNoEncontrado() {
+        when(medicoRepository.findById(99L)).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                medicoService.actualizarEstadoAprobacion(99L, MedicoEntity.EstadoAprobacion.aprobado)
+        );
+
+        assertEquals("Médico no encontrado", ex.getMessage());
+    }
+
+    @Test
     void testBuscarPorEspecialidadYUbicacion() {
         when(medicoRepository.buscarPorEspecialidadYLocalidad("Cardiología", "San José"))
                 .thenReturn(Collections.singletonList(medico));
@@ -101,6 +126,18 @@ class MedicoServiceImplTest {
 
         assertEquals(1, resultados.size());
         verify(medicoMapper).mapTo(medico);
+    }
+
+    @Test
+    void testBuscarPorEspecialidadYUbicacionConValoresNulos() {
+        when(medicoRepository.buscarPorEspecialidadYLocalidad(null, null))
+                .thenReturn(Collections.singletonList(medico));
+        when(medicoMapper.mapTo(medico)).thenReturn(new MedicoDto());
+
+        List<MedicoDto> resultados = medicoService.buscarPorEspecialidadYUbicacion("", "   ");
+
+        assertEquals(1, resultados.size());
+        verify(medicoRepository).buscarPorEspecialidadYLocalidad(null, null);
     }
 
     @Test

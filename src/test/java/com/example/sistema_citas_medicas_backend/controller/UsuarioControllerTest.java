@@ -1,5 +1,6 @@
 package com.example.sistema_citas_medicas_backend.controller;
 
+import com.example.sistema_citas_medicas_backend.datos.entidades.MedicoEntity;
 import com.example.sistema_citas_medicas_backend.datos.entidades.RolUsuario;
 import com.example.sistema_citas_medicas_backend.datos.entidades.UsuarioEntity;
 import com.example.sistema_citas_medicas_backend.dto.UsuarioDto;
@@ -47,14 +48,9 @@ class UsuarioControllerTest {
 
     @Test
     void testRegistrarUsuarioNuevo() throws Exception {
-        UsuarioDto dto = new UsuarioDto();
-        dto.setId(1L);
-        dto.setNombre("Juan");
-        dto.setClave("1234");
-        dto.setRol("PACIENTE");
-
+        UsuarioDto dto = new UsuarioDto(1L, "Juan", "1234", "PACIENTE");
         Mockito.when(usuarioService.findById(1L)).thenReturn(Optional.empty());
-        Mockito.when(usuarioService.save(any(UsuarioEntity.class))).thenReturn(new UsuarioEntity());
+        Mockito.when(usuarioService.save(any())).thenReturn(new UsuarioEntity());
 
         mockMvc.perform(post("/api/usuarios/registro")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -65,12 +61,7 @@ class UsuarioControllerTest {
 
     @Test
     void testRegistrarUsuarioExistente() throws Exception {
-        UsuarioDto dto = new UsuarioDto();
-        dto.setId(1L);
-        dto.setNombre("Juan");
-        dto.setClave("1234");
-        dto.setRol("PACIENTE");
-
+        UsuarioDto dto = new UsuarioDto(1L, "Juan", "1234", "PACIENTE");
         Mockito.when(usuarioService.findById(1L)).thenReturn(Optional.of(new UsuarioEntity()));
 
         mockMvc.perform(post("/api/usuarios/registro")
@@ -82,11 +73,7 @@ class UsuarioControllerTest {
 
     @Test
     void testRegistrarUsuarioRolInvalido() throws Exception {
-        UsuarioDto dto = new UsuarioDto();
-        dto.setId(2L);
-        dto.setNombre("Maria");
-        dto.setClave("abcd");
-        dto.setRol("INVALIDO");
+        UsuarioDto dto = new UsuarioDto(2L, "Maria", "abcd", "INVALIDO");
 
         mockMvc.perform(post("/api/usuarios/registro")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,13 +83,23 @@ class UsuarioControllerTest {
     }
 
     @Test
-    void testLoginCorrecto() throws Exception {
-        UsuarioDto loginDto = new UsuarioDto();
-        loginDto.setId(1L);
-        loginDto.setClave("1234");
+    void testRegistrarUsuarioNombreVacio() throws Exception {
+        UsuarioDto dto = new UsuarioDto(3L, "", "clave", "PACIENTE");
 
+        mockMvc.perform(post("/api/usuarios/registro")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("El nombre no puede estar vacío."));
+    }
+
+    @Test
+    void testLoginCorrectoPaciente() throws Exception {
+        UsuarioDto loginDto = new UsuarioDto(1L, null, "1234", null);
         UsuarioEntity usuario = new UsuarioEntity(1L, "Ana", "1234", RolUsuario.PACIENTE);
+
         Mockito.when(usuarioService.findById(1L)).thenReturn(Optional.of(usuario));
+        Mockito.when(usuarioMapper.mapTo(usuario)).thenReturn(new UsuarioDto(1L, "Ana", "1234", "PACIENTE"));
 
         mockMvc.perform(post("/api/usuarios/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -110,24 +107,77 @@ class UsuarioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.nombre").value("Ana"))
-                .andExpect(jsonPath("$.rol").value("PACIENTE"))
-                .andExpect(jsonPath("$.redirect").value("/dashboard"));
+                .andExpect(jsonPath("$.rol").value("PACIENTE"));
     }
 
     @Test
     void testLoginIncorrecto() throws Exception {
-        UsuarioDto loginDto = new UsuarioDto();
-        loginDto.setId(1L);
-        loginDto.setClave("wrong");
-
+        UsuarioDto loginDto = new UsuarioDto(1L, null, "wrong", null);
         UsuarioEntity usuario = new UsuarioEntity(1L, "Ana", "1234", RolUsuario.PACIENTE);
+
         Mockito.when(usuarioService.findById(1L)).thenReturn(Optional.of(usuario));
 
         mockMvc.perform(post("/api/usuarios/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginDto)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(content().string("Credenciales inválidas"));
+                .andExpect(content().string("Credenciales inválidas."));
+    }
+
+    @Test
+    void testLoginMedicoPendiente() throws Exception {
+        MedicoEntity medico = new MedicoEntity(2L, "Dr. Smith", "clave", "Cardiología", 100.0, "San José", 30, "Experto", MedicoEntity.EstadoAprobacion.pendiente);
+
+        UsuarioDto loginDto = new UsuarioDto(2L, null, "clave", null);
+        Mockito.when(usuarioService.findById(2L)).thenReturn(Optional.of(medico));
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginDto)))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Cuenta pendiente de aprobación por el administrador."));
+    }
+
+    @Test
+    void testLoginMedicoRechazado() throws Exception {
+        MedicoEntity medico = new MedicoEntity(3L, "Dr. House", "clave", "Oncología", 150.0, "Heredia", 25, "Especialista", MedicoEntity.EstadoAprobacion.rechazado);
+
+        UsuarioDto loginDto = new UsuarioDto(3L, null, "clave", null);
+        Mockito.when(usuarioService.findById(3L)).thenReturn(Optional.of(medico));
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginDto)))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Cuenta rechazada. Contacte al administrador."));
+    }
+
+    @Test
+    void testLoginMedicoAprobadoPerfilIncompleto() throws Exception {
+        MedicoEntity medico = new MedicoEntity(4L, "Dr. Lara", "clave", "Especialidad no definida", 80.0, "Localidad no especificada", 20, "Presentación no disponible", MedicoEntity.EstadoAprobacion.aprobado);
+
+        UsuarioDto loginDto = new UsuarioDto(4L, null, "clave", null);
+        Mockito.when(usuarioService.findById(4L)).thenReturn(Optional.of(medico));
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perfilCompleto").value(false));
+    }
+
+    @Test
+    void testLoginMedicoAprobadoPerfilCompleto() throws Exception {
+        MedicoEntity medico = new MedicoEntity(5L, "Dr. Jiménez", "clave", "Pediatría", 120.0, "Cartago", 45, "Atiendo con amor", MedicoEntity.EstadoAprobacion.aprobado);
+
+        UsuarioDto loginDto = new UsuarioDto(5L, null, "clave", null);
+        Mockito.when(usuarioService.findById(5L)).thenReturn(Optional.of(medico));
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perfilCompleto").value(true));
     }
 
     @Test

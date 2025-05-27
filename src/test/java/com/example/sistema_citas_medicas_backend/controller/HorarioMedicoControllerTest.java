@@ -51,10 +51,8 @@ class HorarioMedicoControllerTest {
 
     @Test
     void testObtenerHorariosExtendidos() throws Exception {
-        // Preparar horarios simulados
         Mockito.when(horarioService.obtenerHorariosPorMedico(1L)).thenReturn(List.of(dto));
 
-        // Simular espacios generados (3 días distintos)
         List<String> dias = List.of("2025-05-26", "2025-05-27", "2025-05-28");
         List<LocalDateTime> espacios = List.of(
                 LocalDateTime.of(2025, 5, 26, 8, 0),
