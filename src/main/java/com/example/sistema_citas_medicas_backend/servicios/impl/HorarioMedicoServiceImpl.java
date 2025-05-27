@@ -79,7 +79,7 @@ public class HorarioMedicoServiceImpl implements HorarioMedicoService {
     public HorarioMedicoDto actualizarHorario(Long idHorario, HorarioMedicoDto horarioDto) {
         return horarioMedicoRepository.findById(idHorario).map(horarioExistente -> {
             try {
-                HorarioMedicoEntity.DiaSemana diaSemanaEnum = HorarioMedicoEntity.DiaSemana.valueOf(horarioDto.getDiaSemana().toUpperCase());
+                HorarioMedicoEntity.DiaSemana diaSemanaEnum = HorarioMedicoEntity.DiaSemana.valueOf(horarioDto.getDiaSemana().toLowerCase());
                 horarioExistente.setDiaSemana(diaSemanaEnum);
             } catch (IllegalArgumentException e) {
                 throw new RuntimeException("Día de la semana inválido: " + horarioDto.getDiaSemana());
