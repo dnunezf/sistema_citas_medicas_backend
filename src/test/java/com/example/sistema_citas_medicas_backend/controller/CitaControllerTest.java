@@ -82,6 +82,8 @@ class CitaControllerTest {
 
     @Test
     void testActualizarCita() throws Exception {
+        citaDto.setEstado("confirmada"); // ← actualizamos el mock para reflejar el cambio
+
         when(citaService.actualizarCita(1L, CitaEntity.EstadoCita.confirmada, "Todo listo"))
                 .thenReturn(citaDto);
 
@@ -89,7 +91,7 @@ class CitaControllerTest {
                         .param("estado", "confirmada")
                         .param("notas", "Todo listo"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("pendiente")); // porque citaDto.setEstado("pendiente")
+                .andExpect(jsonPath("$.estado").value("confirmada"));
     }
 
     @Test
@@ -99,5 +101,27 @@ class CitaControllerTest {
         mockMvc.perform(get("/api/medico/citas/detalle/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
+    }
+
+    @Test
+    void testFiltrarPorEstadoYNombre() throws Exception {
+        when(citaService.filtrarCitasPorEstadoYNombre(101L, CitaEntity.EstadoCita.pendiente, "Carlos"))
+                .thenReturn(List.of(citaDto));
+
+        mockMvc.perform(get("/api/medico/citas/101/buscar")
+                        .param("estado", "pendiente")
+                        .param("nombre", "Carlos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nombrePaciente").value("Carlos"))
+                .andExpect(jsonPath("$[0].estado").value("pendiente"));
+    }
+
+    @Test
+    void testFiltrarSinParametros() throws Exception {
+        when(citaService.obtenerCitasPorMedico(101L)).thenReturn(List.of(citaDto));
+
+        mockMvc.perform(get("/api/medico/citas/101/buscar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L));
     }
 }

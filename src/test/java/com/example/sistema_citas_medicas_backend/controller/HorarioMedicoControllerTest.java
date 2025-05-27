@@ -1,6 +1,7 @@
 package com.example.sistema_citas_medicas_backend.controller;
 
 import com.example.sistema_citas_medicas_backend.dto.HorarioMedicoDto;
+import com.example.sistema_citas_medicas_backend.servicios.CitaService;
 import com.example.sistema_citas_medicas_backend.servicios.HorarioMedicoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +14,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -29,6 +31,9 @@ class HorarioMedicoControllerTest {
     @MockBean
     private HorarioMedicoService horarioService;
 
+    @MockBean
+    private CitaService citaService;
+
     private ObjectMapper objectMapper;
     private HorarioMedicoDto dto;
 
@@ -43,6 +48,30 @@ class HorarioMedicoControllerTest {
         dto.setHoraFin("12:00");
         dto.setTiempoCita(30);
     }
+
+    @Test
+    void testObtenerHorariosExtendidos() throws Exception {
+        // Preparar horarios simulados
+        Mockito.when(horarioService.obtenerHorariosPorMedico(1L)).thenReturn(List.of(dto));
+
+        // Simular espacios generados (3 días distintos)
+        List<String> dias = List.of("2025-05-26", "2025-05-27", "2025-05-28");
+        List<LocalDateTime> espacios = List.of(
+                LocalDateTime.of(2025, 5, 26, 8, 0),
+                LocalDateTime.of(2025, 5, 27, 8, 0),
+                LocalDateTime.of(2025, 5, 28, 8, 0)
+        );
+
+        Mockito.when(citaService.generarTodosLosEspaciosExtendido(eq(1L), anyList()))
+                .thenReturn(espacios);
+
+        mockMvc.perform(get("/api/horarios/extendido/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.['2025-05-26']").isArray())
+                .andExpect(jsonPath("$.['2025-05-27']").isArray())
+                .andExpect(jsonPath("$.['2025-05-28']").isArray());
+    }
+
 
     @Test
     void testListarHorarios() throws Exception {

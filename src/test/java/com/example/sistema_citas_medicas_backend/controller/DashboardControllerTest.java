@@ -68,9 +68,21 @@ class DashboardControllerTest {
     @Test
     void testObtenerDashboard() throws Exception {
         Mockito.when(medicoService.obtenerMedicos()).thenReturn(List.of(medicoDto));
+
+        // Mock horarios
         Mockito.when(horarioMedicoService.obtenerHorariosPorMedico(1L)).thenReturn(List.of(horarioDto));
+
+        // Simular espacios para tres días diferentes
+        LocalDateTime ahora = LocalDateTime.of(2025, 5, 26, 10, 0);
+        List<LocalDateTime> espacios = List.of(
+                ahora,                                 // Día 1
+                ahora.plusDays(1).withHour(9),         // Día 2
+                ahora.plusDays(2).withHour(8)          // Día 3
+        );
+
         Mockito.when(citaService.generarTodosLosEspacios(anyLong(), Mockito.anyList()))
-                .thenReturn(List.of(LocalDateTime.now().plusHours(1)));
+                .thenReturn(espacios); // si no has cambiado aún a generarEspaciosDesdeFecha()
+
         Mockito.when(citaService.obtenerCitasPorMedico(1L)).thenReturn(List.of(citaDto));
         Mockito.when(medicoService.obtenerEspecialidades()).thenReturn(List.of("Pediatría", "Cardiología"));
 
@@ -78,6 +90,8 @@ class DashboardControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.medicos[0].nombre").value("Dr. Pérez"))
-                .andExpect(jsonPath("$.especialidades[0]").value("Pediatría"));
+                .andExpect(jsonPath("$.especialidades[0]").value("Pediatría"))
+                .andExpect(jsonPath("$.espaciosAgrupados['1']").exists())
+                .andExpect(jsonPath("$.espaciosAgrupados['1'].length()").value(3)); // esperamos 3 días agrupados
     }
 }

@@ -8,13 +8,17 @@ import com.example.sistema_citas_medicas_backend.datos.repositorios.HorarioMedic
 import com.example.sistema_citas_medicas_backend.datos.repositorios.MedicoRepository;
 import com.example.sistema_citas_medicas_backend.datos.repositorios.PacienteRepository;
 import com.example.sistema_citas_medicas_backend.dto.CitaDto;
+import com.example.sistema_citas_medicas_backend.dto.HorarioMedicoDto;
 import com.example.sistema_citas_medicas_backend.servicios.impl.CitaServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.mockito.Mock;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -123,4 +127,57 @@ class CitaServiceImplTest {
 
         assertEquals(1L, idMedico);
     }
+
+    @Test
+    void testGenerarTodosLosEspacios() {
+        HorarioMedicoDto horario = new HorarioMedicoDto();
+        horario.setDiaSemana("lunes");
+        horario.setHoraInicio("08:00");
+        horario.setHoraFin("09:00");
+        horario.setTiempoCita(30);
+
+        LocalDate fixedDate = LocalDate.of(2025, 5, 26); // lunes
+        Clock fixedClock = Clock.fixed(fixedDate.atStartOfDay(ZoneId.of("America/Costa_Rica")).toInstant(), ZoneId.of("America/Costa_Rica"));
+        LocalDate.now(fixedClock); // Simula el día
+
+        when(citaRepository.existsByMedicoAndFechaHora(any(), any())).thenReturn(false);
+
+        List<LocalDateTime> espacios = citaService.generarTodosLosEspacios(1L, List.of(horario));
+
+        assertEquals(2, espacios.size()); // 08:00 y 08:30
+    }
+
+    @Test
+    void testGenerarEspaciosDesdeFecha() {
+        HorarioMedicoDto horario = new HorarioMedicoDto();
+        horario.setDiaSemana("lunes");
+        horario.setHoraInicio("08:00");
+        horario.setHoraFin("09:00");
+        horario.setTiempoCita(30);
+
+        LocalDate fechaInicio = LocalDate.of(2025, 5, 26); // lunes
+        when(citaRepository.existsByMedicoAndFechaHora(any(), any())).thenReturn(false);
+
+        List<LocalDateTime> espacios = citaService.generarEspaciosDesdeFecha(1L, List.of(horario), fechaInicio, 1);
+
+        assertEquals(2, espacios.size());
+        assertEquals(LocalDateTime.of(2025, 5, 26, 8, 0), espacios.get(0));
+        assertEquals(LocalDateTime.of(2025, 5, 26, 8, 30), espacios.get(1));
+    }
+
+    @Test
+    void testGenerarTodosLosEspaciosExtendido() {
+        HorarioMedicoDto horario = new HorarioMedicoDto();
+        horario.setDiaSemana("lunes");
+        horario.setHoraInicio("08:00");
+        horario.setHoraFin("09:00");
+        horario.setTiempoCita(30);
+
+        when(citaRepository.existsByMedicoAndFechaHora(any(), any())).thenReturn(false);
+
+        List<LocalDateTime> espacios = citaService.generarTodosLosEspaciosExtendido(1L, List.of(horario));
+
+        assertFalse(espacios.isEmpty());
+    }
+
 }
