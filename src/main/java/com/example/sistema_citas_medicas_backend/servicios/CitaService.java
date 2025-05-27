@@ -47,4 +47,6 @@ public interface CitaService {
 
     List<CitaDto> filtrarCitasPorEstadoYNombreMedico(Long idPaciente, String estado, String nombreMedico);
 
+    List<LocalDateTime> generarTodosLosEspaciosExtendido(Long idMedico, List<HorarioMedicoDto> horarios);
+
 }

@@ -325,4 +325,11 @@ public class CitaServiceImpl implements CitaService {
                 ))
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<LocalDateTime> generarTodosLosEspaciosExtendido(Long idMedico, List<HorarioMedicoDto> horarios) {
+        // Generar para 14 días por ejemplo
+        return generarEspaciosDesdeFecha(idMedico, horarios, LocalDate.now(), 14);
+    }
+
 }
