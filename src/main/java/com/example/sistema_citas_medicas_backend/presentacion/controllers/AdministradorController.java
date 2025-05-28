@@ -1,9 +1,9 @@
 package com.example.sistema_citas_medicas_backend.presentacion.controllers;
 
-
 import com.example.sistema_citas_medicas_backend.datos.entidades.MedicoEntity;
 import com.example.sistema_citas_medicas_backend.servicios.MedicoService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,12 +20,14 @@ public class AdministradorController {
     }
 
     @GetMapping("/medicos")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<MedicoEntity>> obtenerTodos() {
         List<MedicoEntity> medicos = medicoService.obtenerTodosMedicos();
         return ResponseEntity.ok(medicos);
     }
 
     @PutMapping("/medicos/{id}/estado")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<String> actualizarEstado(
             @PathVariable Long id,
             @RequestBody EstadoAprobacionRequest request

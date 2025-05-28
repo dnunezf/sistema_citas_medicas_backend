@@ -1,19 +1,24 @@
 package com.example.sistema_citas_medicas_backend.presentacion.controllers;
 
+
+import com.example.sistema_citas_medicas_backend.Security.JwtUtils;
 import com.example.sistema_citas_medicas_backend.datos.entidades.MedicoEntity;
 import com.example.sistema_citas_medicas_backend.datos.entidades.PacienteEntity;
 import com.example.sistema_citas_medicas_backend.datos.entidades.RolUsuario;
 import com.example.sistema_citas_medicas_backend.datos.entidades.UsuarioEntity;
-import com.example.sistema_citas_medicas_backend.dto.MedicoDto;
 import com.example.sistema_citas_medicas_backend.dto.UsuarioDto;
+import com.example.sistema_citas_medicas_backend.dto.UsuarioPrincipal;
 import com.example.sistema_citas_medicas_backend.mappers.Mapper;
-import com.example.sistema_citas_medicas_backend.mappers.impl.UsuarioMapper;
 import com.example.sistema_citas_medicas_backend.servicios.UsuarioService;
-import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 
 import java.time.LocalDate;
 import java.util.*;
@@ -25,18 +30,22 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final Mapper<UsuarioEntity, UsuarioDto> usuarioMapper;
-    private final Mapper<MedicoEntity, MedicoDto> medicoMapper;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtils jwtUtils;
 
+    @Autowired
     public UsuarioController(UsuarioService usuarioService,
                              Mapper<UsuarioEntity, UsuarioDto> usuarioMapper,
-                             Mapper<MedicoEntity, MedicoDto> medicoMapper) {
+                             AuthenticationManager authenticationManager,
+                             JwtUtils jwtUtils) {
         this.usuarioService = usuarioService;
         this.usuarioMapper = usuarioMapper;
-        this.medicoMapper = medicoMapper;
+        this.authenticationManager = authenticationManager;
+        this.jwtUtils = jwtUtils;
     }
 
     @PostMapping("/registro")
-    public ResponseEntity<?> registrarUsuario(@RequestBody UsuarioDto dto) {
+    public ResponseEntity<?> registrarUsuario(@Valid @RequestBody UsuarioDto dto) {
         if (dto.getNombre() == null || dto.getNombre().isBlank()) {
             return ResponseEntity.badRequest().body("El nombre no puede estar vacío.");
         }
@@ -88,65 +97,26 @@ public class UsuarioController {
         }
     }
 
-//    @PostMapping("/login")
-//    public ResponseEntity<?> login(@RequestBody UsuarioDto loginDto, HttpSession session) {
-//        Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
-//
-//        if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(loginDto.getClave())) {
-//            UsuarioEntity usuario = usuarioOpt.get();
-//
-//            // Guardar usuario en sesión
-//            session.setAttribute("usuario", usuario);
-//
-//            // Obtener URL pendiente si existía
-//            String urlPendiente = (String) session.getAttribute("urlPendiente");
-//            session.removeAttribute("urlPendiente"); // Limpiarla después de usarla
-//
-//            String rol = usuario.getRol().name();
-//            String redirect;
-//
-//            if (urlPendiente != null) {
-//                redirect = urlPendiente;
-//            } else {
-//                redirect = switch (usuario.getRol()) {
-//                    case PACIENTE -> "/dashboard";
-//                    case MEDICO -> "/citas/medico/" + usuario.getId();
-//                    case ADMINISTRADOR -> "/admin/lista";
-//                };
-//            }
-//
-//            // Armar respuesta con datos útiles
-//            return ResponseEntity.ok(Map.of(
-//                    "id", usuario.getId(),
-//                    "nombre", usuario.getNombre(),
-//                    "rol", rol,
-//                    "redirect", redirect
-//            ));
-//        }
-//
-//        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
-//    }
-
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UsuarioDto loginDto) {
-        Optional<UsuarioEntity> usuarioOpt = usuarioService.findById(loginDto.getId());
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginDto.getNombre(), loginDto.getClave())
+            );
 
-        if (usuarioOpt.isPresent() && usuarioOpt.get().getClave().equals(loginDto.getClave())) {
-            UsuarioEntity usuario = usuarioOpt.get();
+            UsuarioPrincipal usuarioPrincipal = (UsuarioPrincipal) authentication.getPrincipal();
+            UsuarioEntity usuarioEntity = usuarioPrincipal.getUsuarioEntity();
 
-            if (usuario instanceof MedicoEntity) {
-                MedicoEntity medico = (MedicoEntity) usuario;
+            String token = jwtUtils.generateToken(usuarioPrincipal);
 
-                if (medico.getEstadoAprobacion() == MedicoEntity.EstadoAprobacion.pendiente) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("mensaje", "Cuenta pendiente de aprobación por el administrador."));
-                }
-                if (medico.getEstadoAprobacion() == MedicoEntity.EstadoAprobacion.rechazado) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("mensaje", "Cuenta rechazada. Contacte al administrador."));
-                }
+            UsuarioDto usuarioDto = usuarioPrincipal.getUsuario();
+            usuarioDto.setClave(null);
 
-                // Validar si perfil está completo (ejemplo: especialidad distinta a "Especialidad no definida")
+            Map<String, Object> respuesta = new HashMap<>();
+            respuesta.put("token", token);
+            respuesta.put("usuario", usuarioDto);
+
+            if (usuarioEntity instanceof MedicoEntity medico) {
                 boolean perfilCompleto = medico.getEspecialidad() != null
                         && !medico.getEspecialidad().equalsIgnoreCase("Especialidad no definida")
                         && medico.getPresentacion() != null
@@ -154,35 +124,20 @@ public class UsuarioController {
                         && medico.getLocalidad() != null
                         && !medico.getLocalidad().equalsIgnoreCase("Localidad no especificada");
 
-                Map<String, Object> respuesta = new HashMap<>();
-                respuesta.put("id", medico.getId());
-                respuesta.put("nombre", medico.getNombre());
-                respuesta.put("rol", medico.getRol().name());
                 respuesta.put("perfilCompleto", perfilCompleto);
-
-                return ResponseEntity.ok(respuesta);
+                respuesta.put("estadoAprobacion", medico.getEstadoAprobacion());
             }
 
-            // Para pacientes y otros roles: devuelve un mapa uniforme también
-            UsuarioDto dto = usuarioMapper.mapTo(usuario);
-            Map<String, Object> respuesta = new HashMap<>();
-            respuesta.put("id", dto.getId());
-            respuesta.put("nombre", dto.getNombre());
-            respuesta.put("rol", dto.getRol());
-
             return ResponseEntity.ok(respuesta);
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("mensaje", "Credenciales inválidas."));
         }
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("mensaje", "Credenciales inválidas."));
     }
-
-
-
 
     @GetMapping("/roles")
     public ResponseEntity<List<RolUsuario>> obtenerRoles() {
         return ResponseEntity.ok(Arrays.asList(RolUsuario.MEDICO, RolUsuario.PACIENTE));
     }
-
 }

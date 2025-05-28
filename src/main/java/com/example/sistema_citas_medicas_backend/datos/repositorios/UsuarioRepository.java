@@ -16,4 +16,6 @@ public interface UsuarioRepository extends JpaRepository<UsuarioEntity, Long> {
 
     @Query("SELECT u FROM UsuarioEntity u WHERE u.rol = :rol")
     Optional<UsuarioEntity> findByRol(@Param("rol") RolUsuario rol);
+
+    Optional<UsuarioEntity> findByNombre(String nombre);
 }
