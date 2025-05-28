@@ -1,8 +1,10 @@
 package com.example.sistema_citas_medicas_backend.servicios.impl;
 
 import com.example.sistema_citas_medicas_backend.datos.entidades.MedicoEntity;
+import com.example.sistema_citas_medicas_backend.datos.entidades.PacienteEntity;
 import com.example.sistema_citas_medicas_backend.datos.entidades.UsuarioEntity;
 import com.example.sistema_citas_medicas_backend.datos.repositorios.MedicoRepository;
+import com.example.sistema_citas_medicas_backend.datos.repositorios.PacienteRepository;
 import com.example.sistema_citas_medicas_backend.datos.repositorios.UsuarioRepository;
 import com.example.sistema_citas_medicas_backend.servicios.UsuarioService;
 import jakarta.transaction.Transactional;
@@ -18,22 +20,25 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final MedicoRepository medicoRepository;
+    private final PacienteRepository pacienteRepository;
 
     public UsuarioServiceImpl(UsuarioRepository usuarioRepository,
-                              MedicoRepository medicoRepository) {
+                              MedicoRepository medicoRepository, PacienteRepository pacienteRepository) {
         this.usuarioRepository = usuarioRepository;
         this.medicoRepository = medicoRepository;
+        this.pacienteRepository = pacienteRepository;
     }
 
     @Override
     @Transactional
     public UsuarioEntity save(UsuarioEntity usuario) {
-
         if (usuario instanceof MedicoEntity) {
             return medicoRepository.save((MedicoEntity) usuario);
+        } else if (usuario instanceof PacienteEntity) {
+            return pacienteRepository.save((PacienteEntity) usuario);
+        } else {
+            return usuarioRepository.save(usuario);
         }
-
-        return usuarioRepository.save(usuario);
     }
 
     @Override

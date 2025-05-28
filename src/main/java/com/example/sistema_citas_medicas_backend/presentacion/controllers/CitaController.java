@@ -3,10 +3,13 @@ package com.example.sistema_citas_medicas_backend.presentacion.controllers;
 import com.example.sistema_citas_medicas_backend.datos.entidades.CitaEntity;
 import com.example.sistema_citas_medicas_backend.dto.CitaDto;
 import com.example.sistema_citas_medicas_backend.servicios.CitaService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/medico/citas")
@@ -80,4 +83,37 @@ public class CitaController {
     public ResponseEntity<CitaDto> obtenerCitaPorId(@PathVariable Long idCita) {
         return ResponseEntity.ok(citaService.obtenerCitaPorId(idCita));
     }
+
+    @PostMapping("/confirmar")
+    public ResponseEntity<?> confirmarCita(@RequestBody ConfirmarCitaRequest request) {
+        try {
+            // Validar que el paciente existe y rol es PACIENTE
+            // Suponiendo que el servicio agendarCita maneja esta validación
+            LocalDateTime fechaHora = LocalDateTime.parse(request.getFechaHora());
+            CitaDto cita = citaService.agendarCita(request.getIdPaciente(), request.getIdMedico(), fechaHora);
+            return ResponseEntity.ok(cita);
+        } catch (RuntimeException ex) {
+            // Retornar mensaje de error legible
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("mensaje", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("mensaje", "Error interno del servidor"));
+        }
+    }
+
+    public static class ConfirmarCitaRequest {
+        private Long idMedico;
+        private Long idPaciente;
+        private String fechaHora;
+
+        // getters y setters
+        public Long getIdMedico() { return idMedico; }
+        public void setIdMedico(Long idMedico) { this.idMedico = idMedico; }
+        public Long getIdPaciente() { return idPaciente; }
+        public void setIdPaciente(Long idPaciente) { this.idPaciente = idPaciente; }
+        public String getFechaHora() { return fechaHora; }
+        public void setFechaHora(String fechaHora) { this.fechaHora = fechaHora; }
+    }
+
 }

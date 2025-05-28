@@ -139,11 +139,11 @@ public class UsuarioController {
 
                 if (medico.getEstadoAprobacion() == MedicoEntity.EstadoAprobacion.pendiente) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body("Cuenta pendiente de aprobación por el administrador.");
+                            .body(Map.of("mensaje", "Cuenta pendiente de aprobación por el administrador."));
                 }
                 if (medico.getEstadoAprobacion() == MedicoEntity.EstadoAprobacion.rechazado) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body("Cuenta rechazada. Contacte al administrador.");
+                            .body(Map.of("mensaje", "Cuenta rechazada. Contacte al administrador."));
                 }
 
                 // Validar si perfil está completo (ejemplo: especialidad distinta a "Especialidad no definida")
@@ -163,11 +163,18 @@ public class UsuarioController {
                 return ResponseEntity.ok(respuesta);
             }
 
+            // Para pacientes y otros roles: devuelve un mapa uniforme también
             UsuarioDto dto = usuarioMapper.mapTo(usuario);
-            return ResponseEntity.ok(dto);
+            Map<String, Object> respuesta = new HashMap<>();
+            respuesta.put("id", dto.getId());
+            respuesta.put("nombre", dto.getNombre());
+            respuesta.put("rol", dto.getRol());
+
+            return ResponseEntity.ok(respuesta);
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas.");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("mensaje", "Credenciales inválidas."));
     }
 
 
