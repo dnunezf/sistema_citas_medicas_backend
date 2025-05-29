@@ -8,6 +8,7 @@ import com.example.sistema_citas_medicas_backend.datos.repositorios.PacienteRepo
 import com.example.sistema_citas_medicas_backend.datos.repositorios.UsuarioRepository;
 import com.example.sistema_citas_medicas_backend.servicios.UsuarioService;
 import jakarta.transaction.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,17 +22,26 @@ public class UsuarioServiceImpl implements UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final MedicoRepository medicoRepository;
     private final PacienteRepository pacienteRepository;
+    private final PasswordEncoder passwordEncoder;  // Inyectar
 
     public UsuarioServiceImpl(UsuarioRepository usuarioRepository,
-                              MedicoRepository medicoRepository, PacienteRepository pacienteRepository) {
+                              MedicoRepository medicoRepository,
+                              PacienteRepository pacienteRepository,
+                              PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.medicoRepository = medicoRepository;
         this.pacienteRepository = pacienteRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
     public UsuarioEntity save(UsuarioEntity usuario) {
+        // Cifrar contraseña antes de guardar
+        if (usuario.getClave() != null && !usuario.getClave().startsWith("$2a$")) {
+            usuario.setClave(passwordEncoder.encode(usuario.getClave()));
+        }
+
         if (usuario instanceof MedicoEntity) {
             return medicoRepository.save((MedicoEntity) usuario);
         } else if (usuario instanceof PacienteEntity) {
@@ -61,7 +71,14 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioEntity partialUpdate(Long id, UsuarioEntity usuario) {
         return usuarioRepository.findById(id).map(existingUser -> {
             Optional.ofNullable(usuario.getNombre()).ifPresent(existingUser::setNombre);
-            Optional.ofNullable(usuario.getClave()).ifPresent(existingUser::setClave); // sin encriptar
+            Optional.ofNullable(usuario.getClave()).ifPresent(clave -> {
+                // Cifrar si no está cifrada
+                if (!clave.startsWith("$2a$")) {
+                    existingUser.setClave(passwordEncoder.encode(clave));
+                } else {
+                    existingUser.setClave(clave);
+                }
+            });
             Optional.ofNullable(usuario.getRol()).ifPresent(existingUser::setRol);
             return usuarioRepository.save(existingUser);
         }).orElseThrow(() -> new RuntimeException("Usuario no encontrado!"));
@@ -78,8 +95,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         if (usuarioOpt.isPresent()) {
             UsuarioEntity usuario = usuarioOpt.get();
-            // Comparación directa (insegura, solo para pruebas)
-            if (claveNoEncriptada.equals(usuario.getClave())) {
+            // Comparar contraseña usando passwordEncoder
+            if (passwordEncoder.matches(claveNoEncriptada, usuario.getClave())) {
                 return Optional.of(usuario);
             }
         }
@@ -91,5 +108,4 @@ public class UsuarioServiceImpl implements UsuarioService {
     public Optional<UsuarioEntity> findById(Long id) {
         return usuarioRepository.findById(id);
     }
-
 }

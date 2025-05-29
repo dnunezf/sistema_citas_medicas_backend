@@ -35,8 +35,9 @@ public class UsuarioPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(usuario.getRol()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol()));
     }
+
 
     @Override
     public String getPassword() {

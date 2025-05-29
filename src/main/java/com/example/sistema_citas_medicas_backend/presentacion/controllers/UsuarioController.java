@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.*;
-
 @RestController
 @RequestMapping("/api/usuarios")
 @CrossOrigin(origins = "*")
@@ -100,8 +99,11 @@ public class UsuarioController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UsuarioDto loginDto) {
         try {
+            // Convertir id a String para el AuthenticationManager (que usa loadUserByUsername)
+            String idStr = String.valueOf(loginDto.getId());
+
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginDto.getNombre(), loginDto.getClave())
+                    new UsernamePasswordAuthenticationToken(idStr, loginDto.getClave())
             );
 
             UsuarioPrincipal usuarioPrincipal = (UsuarioPrincipal) authentication.getPrincipal();

@@ -23,14 +23,23 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String nombre) throws UsernameNotFoundException {
-        UsuarioEntity usuarioEntity = usuarioRepository.findByNombre(nombre)
+    public UserDetails loadUserByUsername(String idStr) throws UsernameNotFoundException {
+        Long id;
+        try {
+            id = Long.parseLong(idStr);  // Convertir string a Long
+        } catch (NumberFormatException e) {
+            throw new UsernameNotFoundException("ID inválido");
+        }
+
+        UsuarioEntity usuarioEntity = usuarioRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
         UsuarioDto usuarioDto = usuarioMapper.mapTo(usuarioEntity);
-
         return new UsuarioPrincipal(usuarioDto, usuarioEntity);
     }
+
+
+
 
 }
 
