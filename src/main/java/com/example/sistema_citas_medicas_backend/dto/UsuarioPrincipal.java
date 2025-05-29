@@ -13,18 +13,15 @@ public class UsuarioPrincipal implements UserDetails {
     private final UsuarioDto usuario;
     private UsuarioEntity usuarioEntity;
 
-    // Constructor que recibe tanto DTO como Entity
     public UsuarioPrincipal(UsuarioDto usuario, UsuarioEntity usuarioEntity) {
         this.usuario = usuario;
         this.usuarioEntity = usuarioEntity;
     }
 
-    // Getter para el DTO
     public UsuarioDto getUsuario() {
         return usuario;
     }
 
-    // Getter para la entidad, con setter si necesitas modificar después
     public UsuarioEntity getUsuarioEntity() {
         return usuarioEntity;
     }
@@ -35,9 +32,9 @@ public class UsuarioPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Aquí se asegura que Spring interprete correctamente el rol
         return List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol()));
     }
-
 
     @Override
     public String getPassword() {
@@ -46,26 +43,26 @@ public class UsuarioPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
-        return usuario.getNombre();
+        return String.valueOf(usuario.getId());  // ✅ Usa el ID como username
     }
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; // Personaliza según necesidad
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true; // Personaliza según necesidad
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; // Personaliza según necesidad
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return true; // Personaliza según necesidad
+        return true;
     }
 }
