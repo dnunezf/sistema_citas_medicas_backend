@@ -13,13 +13,16 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -52,6 +55,7 @@ class AdministradorControllerTest {
         );
     }
 
+    @WithMockUser(roles = "ADMINISTRADOR")
     @Test
     void testObtenerTodosLosMedicos() throws Exception {
         Mockito.when(medicoService.obtenerTodosMedicos()).thenReturn(List.of(medico));
@@ -61,20 +65,41 @@ class AdministradorControllerTest {
                 .andExpect(jsonPath("$[0].nombre").value("Dr. Ana"));
     }
 
+    @WithMockUser(roles = "ADMINISTRADOR")
     @Test
-    void testActualizarEstadoAprobacion() throws Exception {
-        AdministradorController.EstadoAprobacionRequest request = new AdministradorController.EstadoAprobacionRequest("aprobado");
+    void testActualizarEstadoAprobacionAprobado() throws Exception {
+        AdministradorController.EstadoAprobacionRequest request =
+                new AdministradorController.EstadoAprobacionRequest("aprobado");
 
         mockMvc.perform(put("/api/admin/medicos/1/estado")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Estado actualizado correctamente."));
+
+        verify(medicoService).actualizarEstadoAprobacion(1L, MedicoEntity.EstadoAprobacion.aprobado);
     }
 
+    @WithMockUser(roles = "ADMINISTRADOR")
+    @Test
+    void testActualizarEstadoAprobacionRechazado() throws Exception {
+        AdministradorController.EstadoAprobacionRequest request =
+                new AdministradorController.EstadoAprobacionRequest("rechazado");
+
+        mockMvc.perform(put("/api/admin/medicos/1/estado")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Estado actualizado correctamente."));
+
+        verify(medicoService).actualizarEstadoAprobacion(1L, MedicoEntity.EstadoAprobacion.rechazado);
+    }
+
+    @WithMockUser(roles = "ADMINISTRADOR")
     @Test
     void testActualizarEstadoAprobacionInvalido() throws Exception {
-        AdministradorController.EstadoAprobacionRequest request = new AdministradorController.EstadoAprobacionRequest("inexistente");
+        AdministradorController.EstadoAprobacionRequest request =
+                new AdministradorController.EstadoAprobacionRequest("inexistente");
 
         mockMvc.perform(put("/api/admin/medicos/1/estado")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -83,6 +108,7 @@ class AdministradorControllerTest {
                 .andExpect(content().string("Error al actualizar el estado."));
     }
 
+    @WithMockUser(roles = "ADMINISTRADOR")
     @Test
     void testActualizarEstadoAprobacionException() throws Exception {
         AdministradorController.EstadoAprobacionRequest request =

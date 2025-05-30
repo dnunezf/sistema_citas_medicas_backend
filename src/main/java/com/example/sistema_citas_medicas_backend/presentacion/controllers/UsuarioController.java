@@ -119,6 +119,11 @@ public class UsuarioController {
             respuesta.put("usuario", usuarioDto);
 
             if (usuarioEntity instanceof MedicoEntity medico) {
+                if (medico.getEstadoAprobacion() != MedicoEntity.EstadoAprobacion.aprobado) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("mensaje", "🛑 Su cuenta aún no ha sido aprobada por un administrador."));
+                }
+
                 boolean perfilCompleto = medico.getEspecialidad() != null
                         && !medico.getEspecialidad().equalsIgnoreCase("Especialidad no definida")
                         && medico.getPresentacion() != null
@@ -129,6 +134,7 @@ public class UsuarioController {
                 respuesta.put("perfilCompleto", perfilCompleto);
                 respuesta.put("estadoAprobacion", medico.getEstadoAprobacion());
             }
+
 
             return ResponseEntity.ok(respuesta);
 
