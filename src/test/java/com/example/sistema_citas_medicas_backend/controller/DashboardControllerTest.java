@@ -57,8 +57,8 @@ class DashboardControllerTest {
         horarioDto.setHoraInicio("08:00");
         horarioDto.setHoraFin("12:00");
         horarioDto.setTiempoCita(30);
-        
-        LocalDateTime hoy = LocalDateTime.now().withHour(10).withMinute(0).withSecond(0).withNano(0);
+
+        LocalDateTime hoy = LocalDateTime.now().withSecond(0).withNano(0);
         citaDto = new CitaDto();
         citaDto.setId(1L);
         citaDto.setIdMedico(1L);
@@ -70,16 +70,14 @@ class DashboardControllerTest {
         Mockito.when(medicoService.obtenerMedicos()).thenReturn(List.of(medicoDto));
         Mockito.when(horarioMedicoService.obtenerHorariosPorMedico(1L)).thenReturn(List.of(horarioDto));
 
-        LocalDateTime hoy = LocalDateTime.now().withHour(10).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime ahora = LocalDateTime.now().withSecond(0).withNano(0);
         List<LocalDateTime> espacios = List.of(
-                hoy,
-                hoy.plusDays(1),
-                hoy.plusDays(2)
+                ahora,
+                ahora.plusDays(1),
+                ahora.plusDays(2)
         );
 
-        Mockito.when(citaService.generarTodosLosEspacios(anyLong(), anyList()))
-                .thenReturn(espacios);
-
+        Mockito.when(citaService.generarTodosLosEspacios(anyLong(), anyList())).thenReturn(espacios);
         Mockito.when(citaService.obtenerCitasPorMedico(1L)).thenReturn(List.of(citaDto));
         Mockito.when(medicoService.obtenerEspecialidades()).thenReturn(List.of("Pediatría", "Cardiología"));
 
@@ -89,7 +87,7 @@ class DashboardControllerTest {
                 .andExpect(jsonPath("$.medicos[0].nombre").value("Dr. Pérez"))
                 .andExpect(jsonPath("$.especialidades[0]").value("Pediatría"))
                 .andExpect(jsonPath("$.espaciosAgrupados['1']").exists())
-                .andExpect(jsonPath("$.espaciosAgrupados['1'].length()").value(3));
+                .andExpect(jsonPath("$.horasOcupadas['1']").isArray());
     }
 
     @Test

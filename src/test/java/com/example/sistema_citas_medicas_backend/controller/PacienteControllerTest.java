@@ -1,7 +1,11 @@
 package com.example.sistema_citas_medicas_backend.controller;
 
 import com.example.sistema_citas_medicas_backend.datos.entidades.PacienteEntity;
+import com.example.sistema_citas_medicas_backend.datos.entidades.RolUsuario;
+import com.example.sistema_citas_medicas_backend.datos.entidades.UsuarioEntity;
 import com.example.sistema_citas_medicas_backend.dto.PacienteDto;
+import com.example.sistema_citas_medicas_backend.dto.UsuarioDto;
+import com.example.sistema_citas_medicas_backend.dto.UsuarioPrincipal;
 import com.example.sistema_citas_medicas_backend.mappers.Mapper;
 import com.example.sistema_citas_medicas_backend.servicios.PacienteService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +17,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -52,6 +58,22 @@ class PacienteControllerTest {
         pacienteDto.setFechaNacimiento(LocalDate.of(1995, 5, 20));
         pacienteDto.setTelefono("8888-8888");
         pacienteDto.setDireccion("San José");
+
+        autenticarComoPaciente(1L); // Establece la autenticación válida
+    }
+
+    private void autenticarComoPaciente(Long idPaciente) {
+        UsuarioDto dto = new UsuarioDto();
+        dto.setId(idPaciente);
+        dto.setRol("PACIENTE");
+
+        UsuarioEntity entity = new UsuarioEntity();
+        entity.setId(idPaciente);
+        entity.setRol(RolUsuario.valueOf("PACIENTE"));
+
+        UsuarioPrincipal principal = new UsuarioPrincipal(dto, entity);
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     @Test
@@ -67,6 +89,7 @@ class PacienteControllerTest {
     @Test
     void testObtenerPacienteNoExistente() throws Exception {
         when(pacienteService.obtenerPorId(99L)).thenReturn(null);
+        autenticarComoPaciente(99L); // Autenticación para ID 99
 
         mockMvc.perform(get("/api/pacientes/99"))
                 .andExpect(status().isNotFound());
@@ -85,13 +108,13 @@ class PacienteControllerTest {
 
     @Test
     void testActualizarPacienteIdNoCoincide() throws Exception {
-        pacienteDto.setId(2L);
+        pacienteDto.setId(2L); // ID en DTO no coincide con el del path
 
         mockMvc.perform(put("/api/pacientes/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(pacienteDto)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("El ID del path no coincide con el del objeto."));
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("No tienes permiso para modificar este perfil."));
     }
 
     @Test
@@ -124,5 +147,4 @@ class PacienteControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Paciente actualizado correctamente."));
     }
-
 }
