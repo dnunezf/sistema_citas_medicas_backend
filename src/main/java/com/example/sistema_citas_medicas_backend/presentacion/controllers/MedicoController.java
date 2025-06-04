@@ -30,13 +30,14 @@ public class MedicoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('MEDICO')")
+    @PreAuthorize("hasAnyRole('MEDICO', 'PACIENTE')")
     public ResponseEntity<MedicoDto> obtenerMedico(@PathVariable Long id) {
         return medicoService.obtenerPorId(id)
                 .map(medicoMapper::mapTo)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
 
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('MEDICO')")

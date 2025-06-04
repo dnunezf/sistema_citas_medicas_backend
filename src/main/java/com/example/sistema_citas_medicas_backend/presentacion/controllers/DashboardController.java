@@ -44,6 +44,7 @@ public class DashboardController {
                     (localidad == null || localidad.isBlank())) {
                 medicos = medicoService.obtenerMedicos().stream()
                         .filter(m -> "aprobado".equalsIgnoreCase(m.getEstadoAprobacion()))
+                        .filter(m -> m.getId() != null && m.getId() > 0)
                         .collect(Collectors.toList());
             } else {
                 medicos = medicoService.buscarPorEspecialidadYUbicacion(especialidad, localidad).stream()
