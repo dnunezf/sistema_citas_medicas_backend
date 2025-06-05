@@ -42,7 +42,7 @@ public class SecurityConfig {
 
                         // Configura acceso según roles usando hasRole
                         .requestMatchers("/api/pacientes/**").hasRole("PACIENTE")
-                        .requestMatchers("/api/medicos/**").hasRole("MEDICO")
+                        .requestMatchers("/api/medicos/**").hasAnyRole("MEDICO", "PACIENTE")
                         .requestMatchers("/api/administradores/**").hasRole("ADMINISTRADOR")
 
                         .anyRequest().authenticated()

@@ -30,12 +30,9 @@ public class HorarioMedicoController {
         this.citaService = citaService;
     }
 
-    @PreAuthorize("hasRole('MEDICO')")
     @GetMapping("/extendido/{idMedico}")
     public ResponseEntity<Map<String, List<String>>> obtenerHorariosExtendidos(@PathVariable Long idMedico) {
-        if (!esMedicoAutenticado(idMedico)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+        // Este endpoint puede ser accedido por cualquier rol (o sin autenticación)
 
         List<HorarioMedicoDto> horarios = horarioMedicoService.obtenerHorariosPorMedico(idMedico);
         List<LocalDateTime> espacios = citaService.generarTodosLosEspaciosExtendido(idMedico, horarios);
@@ -49,6 +46,7 @@ public class HorarioMedicoController {
 
         return ResponseEntity.ok(agrupados);
     }
+
 
     @PreAuthorize("hasRole('MEDICO')")
     @GetMapping("/medico/{idMedico}")
