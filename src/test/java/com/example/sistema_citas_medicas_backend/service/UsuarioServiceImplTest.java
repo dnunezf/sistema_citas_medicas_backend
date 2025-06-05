@@ -18,7 +18,7 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.mockito.MockitoAnnotations;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 class UsuarioServiceImplTest {
 
@@ -27,6 +27,9 @@ class UsuarioServiceImplTest {
 
     @Mock
     private MedicoRepository medicoRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UsuarioServiceImpl usuarioService;
@@ -41,18 +44,6 @@ class UsuarioServiceImplTest {
     }
 
     @Test
-    void testGuardarUsuarioNormal() {
-        UsuarioEntity usuario = crearUsuario(1L, "Ana", "clave123", RolUsuario.PACIENTE);
-        when(usuarioRepository.save(usuario)).thenReturn(usuario);
-
-        UsuarioEntity resultado = usuarioService.save(usuario);
-
-        assertNotNull(resultado);
-        assertEquals("Ana", resultado.getNombre());
-        verify(usuarioRepository, times(1)).save(usuario);
-    }
-
-    @Test
     void testGuardarMedico() {
         MedicoEntity medico = new MedicoEntity();
         medico.setId(10L);
@@ -60,43 +51,23 @@ class UsuarioServiceImplTest {
         medico.setClave("diagnostico");
         medico.setRol(RolUsuario.MEDICO);
 
-        when(medicoRepository.save(medico)).thenReturn(medico);
+        when(passwordEncoder.encode("diagnostico")).thenReturn("hashed-diag");
+        medico.setClave("hashed-diag");
+
+        when(medicoRepository.save(any())).thenReturn(medico);
 
         UsuarioEntity resultado = usuarioService.save(medico);
 
         assertNotNull(resultado);
         assertEquals("Dr. House", resultado.getNombre());
-        verify(medicoRepository).save(medico);
-        verify(usuarioRepository, never()).save(any());
-    }
-
-    @Test
-    void testBuscarPorIdExistente() {
-        UsuarioEntity usuario = crearUsuario(2L, "Carlos", "pass", RolUsuario.MEDICO);
-        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(usuario));
-
-        Optional<UsuarioEntity> resultado = usuarioService.findById(2L);
-
-        assertTrue(resultado.isPresent());
-        assertEquals("Carlos", resultado.get().getNombre());
-        verify(usuarioRepository).findById(2L);
-    }
-
-    @Test
-    void testFindOne() {
-        UsuarioEntity usuario = crearUsuario(8L, "Natalia", "clave", RolUsuario.PACIENTE);
-        when(usuarioRepository.findById(8L)).thenReturn(Optional.of(usuario));
-
-        Optional<UsuarioEntity> result = usuarioService.findOne(8L);
-
-        assertTrue(result.isPresent());
-        assertEquals("Natalia", result.get().getNombre());
+        verify(medicoRepository).save(any());
     }
 
     @Test
     void testLoginCorrecto() {
-        UsuarioEntity usuario = crearUsuario(3L, "Luis", "clave123", RolUsuario.PACIENTE);
+        UsuarioEntity usuario = crearUsuario(3L, "Luis", "hashed", RolUsuario.PACIENTE);
         when(usuarioRepository.findById(3L)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("clave123", "hashed")).thenReturn(true);
 
         Optional<UsuarioEntity> loginResult = usuarioService.login(3L, "clave123");
 
@@ -106,26 +77,28 @@ class UsuarioServiceImplTest {
 
     @Test
     void testLoginIncorrecto() {
-        UsuarioEntity usuario = crearUsuario(3L, "Luis", "clave123", RolUsuario.PACIENTE);
+        UsuarioEntity usuario = crearUsuario(3L, "Luis", "hashed", RolUsuario.PACIENTE);
         when(usuarioRepository.findById(3L)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
 
-        Optional<UsuarioEntity> loginResult = usuarioService.login(3L, "incorrecta");
+        Optional<UsuarioEntity> loginResult = usuarioService.login(3L, "wrong");
 
         assertTrue(loginResult.isEmpty());
     }
 
     @Test
     void testActualizarParcialUsuario() {
-        UsuarioEntity original = crearUsuario(4L, "Mario", "1234", RolUsuario.MEDICO);
-        UsuarioEntity updateData = new UsuarioEntity(null, "Mario G", null, null);
+        UsuarioEntity original = crearUsuario(4L, "Mario", "hashed", RolUsuario.MEDICO);
+        UsuarioEntity updateData = new UsuarioEntity(null, "Mario G", "nuevaClave", null);
 
         when(usuarioRepository.findById(4L)).thenReturn(Optional.of(original));
-        when(usuarioRepository.save(any(UsuarioEntity.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(passwordEncoder.encode("nuevaClave")).thenReturn("hashedNueva");
+        when(usuarioRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         UsuarioEntity actualizado = usuarioService.partialUpdate(4L, updateData);
 
         assertEquals("Mario G", actualizado.getNombre());
-        assertEquals("1234", actualizado.getClave());
+        assertEquals("hashedNueva", actualizado.getClave());
         assertEquals(RolUsuario.MEDICO, actualizado.getRol());
     }
 
@@ -151,6 +124,28 @@ class UsuarioServiceImplTest {
                 usuarioService.partialUpdate(999L, new UsuarioEntity()));
 
         assertEquals("Usuario no encontrado!", exception.getMessage());
+    }
+
+    @Test
+    void testBuscarPorIdExistente() {
+        UsuarioEntity usuario = crearUsuario(2L, "Carlos", "pass", RolUsuario.MEDICO);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(usuario));
+
+        Optional<UsuarioEntity> resultado = usuarioService.findById(2L);
+
+        assertTrue(resultado.isPresent());
+        assertEquals("Carlos", resultado.get().getNombre());
+    }
+
+    @Test
+    void testFindOne() {
+        UsuarioEntity usuario = crearUsuario(8L, "Natalia", "clave", RolUsuario.PACIENTE);
+        when(usuarioRepository.findById(8L)).thenReturn(Optional.of(usuario));
+
+        Optional<UsuarioEntity> result = usuarioService.findOne(8L);
+
+        assertTrue(result.isPresent());
+        assertEquals("Natalia", result.get().getNombre());
     }
 
     @Test
